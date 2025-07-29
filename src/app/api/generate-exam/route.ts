@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { promises as fs } from 'fs';
+import path from 'path';
+import os from 'os';
+import { 
+  estimateTokenCount, 
+  chunkText, 
+  getOptimalChunkingStrategy,
+  distributeFlashcardsAcrossChunks
+} from '../../../lib/text-chunker';
 
 const execAsync = promisify(exec);
 
@@ -17,7 +26,116 @@ export async function POST(request: NextRequest) {
 
     const questionCount = Number(count) || 5;
 
-    const prompt = `You are an expert educational content creator. Generate exactly ${questionCount} multiple choice exam questions from the following content. Each question should have exactly 4 options with one correct answer. Include an explanation for the correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
+    // Check if content needs chunking
+    const tokenCount = estimateTokenCount(content);
+    const needsChunking = tokenCount > 25000; // Conservative limit for Gemini prompts
+
+    interface GeminiExamQuestion {
+      question: string;
+      options: string[];
+      correctAnswer: number;
+      explanation: string;
+      difficulty: string;
+    }
+
+    let allQuestions: GeminiExamQuestion[] = [];
+
+    if (needsChunking) {
+      console.log(`Large document detected (${tokenCount} tokens). Using chunking strategy for exam generation.`);
+      
+      // Get optimal chunking strategy and create chunks
+      const strategy = getOptimalChunkingStrategy(content.length);
+      const chunks = chunkText(content, strategy);
+      
+      // Distribute question count across chunks (reusing the flashcard distribution function)
+      const questionCounts = distributeFlashcardsAcrossChunks(chunks, questionCount);
+      
+      console.log(`Processing ${chunks.length} chunks with question distribution:`, questionCounts);
+
+      // Process each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkQuestionCount = questionCounts[i];
+        
+        if (chunkQuestionCount === 0) continue;
+
+        const prompt = `You are an expert educational content creator. Generate exactly ${chunkQuestionCount} multiple choice exam questions from the following content chunk. Each question should have exactly 4 options with one correct answer. Include an explanation for the correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
+
+This is chunk ${i + 1} of ${chunks.length} from a larger document. Focus on the content in this chunk specifically.
+
+Content:
+${chunk.content}
+
+Respond ONLY with valid JSON in this exact format (no other text before or after):
+{
+  "examQuestions": [
+    {
+      "question": "Question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0,
+      "explanation": "Explanation of correct answer here",
+      "difficulty": "medium"
+    }
+  ]
+}`;
+
+        try {
+          // Write prompt to temporary file and use it with stdin to avoid all escaping issues
+          const tempDir = os.tmpdir();
+          const tempFile = path.join(tempDir, `prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.txt`);
+          
+          await fs.writeFile(tempFile, prompt, 'utf8');
+          
+          // Use stdin with cat/type command to pass the prompt
+          const isWindows = process.platform === 'win32';
+          const catCommand = isWindows ? 'type' : 'cat';
+          const command = `${catCommand} "${tempFile}" | gemini -p ""`;
+
+          // Execute the Gemini CLI command
+          const result = await execAsync(command, {
+            timeout: 60000, // 60 second timeout
+            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+          });
+
+          // Clean up the temporary file
+          await fs.unlink(tempFile).catch(() => {}); // Ignore cleanup errors
+
+          let output = result.stdout.trim();
+
+          // More robust JSON extraction - handle Gemini CLI output
+          // Remove common non-JSON prefixes
+          output = output.replace(/^Loaded cached credentials\.\s*/i, '');
+          output = output.replace(/^Loading model\.\.\.\s*/i, '');
+          output = output.replace(/^Generating response\.\.\.\s*/i, '');
+          
+          // Find JSON boundaries more reliably
+          const jsonStart = output.indexOf('{');
+          const jsonEnd = output.lastIndexOf('}');
+
+          if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+            throw new Error(`No valid JSON found in Gemini response for chunk ${i + 1}`);
+          }
+          
+          output = output.substring(jsonStart, jsonEnd + 1);
+
+          // Parse and add questions from this chunk
+          const parsedResponse = JSON.parse(output);
+          if (parsedResponse.examQuestions && Array.isArray(parsedResponse.examQuestions)) {
+            allQuestions.push(...parsedResponse.examQuestions);
+          }
+          
+          // Add small delay between API calls to be respectful
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (chunkError) {
+          console.error(`Error processing chunk ${i + 1}:`, chunkError);
+          // Continue with other chunks even if one fails
+        }
+      }
+    } else {
+      // Process normally for smaller content
+      const prompt = `You are an expert educational content creator. Generate exactly ${questionCount} multiple choice exam questions from the following content. Each question should have exactly 4 options with one correct answer. Include an explanation for the correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
 
 Content:
 ${content}
@@ -35,75 +153,71 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
   ]
 }`;
 
-    // Escape the prompt for shell execution
-    const escapedPrompt = prompt.replace(/"/g, '\\"');
-    const command = `gemini -p "${escapedPrompt}"`;
+      // Write prompt to temporary file and use it with stdin to avoid all escaping issues
+      const tempDir = os.tmpdir();
+      const tempFile = path.join(tempDir, `prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.txt`);
+      
+      await fs.writeFile(tempFile, prompt, 'utf8');
+      
+      // Use stdin with cat/type command to pass the prompt
+      const isWindows = process.platform === 'win32';
+      const catCommand = isWindows ? 'type' : 'cat';
+      const command = `${catCommand} "${tempFile}" | gemini -p ""`;
 
-    // Execute the Gemini CLI command
-    const result = await execAsync(command, {
-      timeout: 60000, // 60 second timeout
-      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-    });
+      // Execute the Gemini CLI command
+      const result = await execAsync(command, {
+        timeout: 60000, // 60 second timeout
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      });
 
-    let output = result.stdout.trim();
+      // Clean up the temporary file
+      await fs.unlink(tempFile).catch(() => {}); // Ignore cleanup errors
 
-    // Remove any non-JSON content (like "Loaded cached credentials.")
-    const jsonStart = output.indexOf('{');
-    const jsonEnd = output.lastIndexOf('}');
+      let output = result.stdout.trim();
 
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      // More robust JSON extraction - handle Gemini CLI output
+      // Remove common non-JSON prefixes
+      output = output.replace(/^Loaded cached credentials\.\s*/i, '');
+      output = output.replace(/^Loading model\.\.\.\s*/i, '');
+      output = output.replace(/^Generating response\.\.\.\s*/i, '');
+      
+      // Find JSON boundaries more reliably
+      const jsonStart = output.indexOf('{');
+      const jsonEnd = output.lastIndexOf('}');
+
+      if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+        throw new Error('No valid JSON found in Gemini response');
+      }
+      
       output = output.substring(jsonStart, jsonEnd + 1);
+
+      // Validate that we have valid JSON
+      const parsedResponse = JSON.parse(output);
+      if (parsedResponse.examQuestions && Array.isArray(parsedResponse.examQuestions)) {
+        allQuestions = parsedResponse.examQuestions;
+      }
     }
 
-    // Validate that we have valid JSON
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(output);
-    } catch {
-      throw new Error('Invalid JSON response from Gemini CLI');
-    }
+    // Add IDs to exam questions and ensure we don't exceed requested count
+    const questionsWithIds = allQuestions
+      .slice(0, questionCount) // Ensure we don't exceed requested count
+      .map((question: GeminiExamQuestion) => ({
+        id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
+        question: question.question || '',
+        options: question.options || [],
+        correctAnswer: question.correctAnswer || 0,
+        explanation: question.explanation || '',
+        difficulty: question.difficulty || 'medium',
+      }));
 
-    // Add IDs to exam questions
-    interface GeminiExamQuestion {
-      question: string;
-      options: string[];
-      correctAnswer: number;
-      explanation: string;
-      difficulty: string;
-    }
-    
-    const questionsWithIds = parsedResponse.examQuestions?.map((question: GeminiExamQuestion) => ({
-      id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-      question: question.question || '',
-      options: question.options || [],
-      correctAnswer: question.correctAnswer || 0,
-      explanation: question.explanation || '',
-      difficulty: question.difficulty || 'medium',
-    })) || [];
-
+    console.log(`Generated ${questionsWithIds.length} exam questions from ${needsChunking ? 'chunked' : 'single'} content`);
     return NextResponse.json({ examQuestions: questionsWithIds });
 
   } catch (error) {
     console.error('Gemini CLI Error:', error);
-    
-    const { count = 5 } = await request.json().catch(() => ({ count: 5 }));
-    const questionCount = Number(count) || 5;
-    
-    // Fallback to mock responses if CLI fails
-    const mockQuestions = Array.from({ length: Math.min(questionCount, 10) }, (_, i) => ({
-      id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-      question: `Sample Question ${i + 1}: Which of the following concepts is discussed in the content?`,
-      options: [
-        `Concept A from the material`,
-        `Concept B from the material`,
-        `Concept C from the material`,
-        `Concept D from the material`
-      ],
-      correctAnswer: i % 4,
-      explanation: `This concept is explained in the provided content material.`,
-      difficulty: ['easy', 'medium', 'hard'][i % 3] as 'easy' | 'medium' | 'hard',
-    }));
-
-    return NextResponse.json({ examQuestions: mockQuestions });
+    return NextResponse.json(
+      { error: 'Failed to generate exam questions. Please try again.' },
+      { status: 500 }
+    );
   }
 }
