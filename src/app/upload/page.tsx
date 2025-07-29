@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { extractTextFromFile, validateFileSize, validateFileType } from '@/lib/document-processor';
 import { generateFlashcards } from '@/lib/gemini-client';
@@ -20,6 +21,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [flashcardCount, setFlashcardCount] = useState([15]); // Default to 15 flashcards
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
@@ -76,7 +78,7 @@ export default function UploadPage() {
 
       // Step 2: Generate flashcards
       setProgress(50);
-      const flashcardsResult = await generateFlashcards(extractResult.content!, 10);
+      const flashcardsResult = await generateFlashcards(extractResult.content!, flashcardCount[0]);
       
       if (flashcardsResult.error) {
         throw new Error(flashcardsResult.error);
@@ -201,6 +203,35 @@ export default function UploadPage() {
                   placeholder="Add a description for your study set"
                   rows={3}
                 />
+              </div>
+
+              {/* Flashcard Count */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="flashcard-count">Number of Flashcards</Label>
+                  <Badge variant="outline" className="text-sm">
+                    {flashcardCount[0]} cards
+                  </Badge>
+                </div>
+                <div className="px-3">
+                  <Slider
+                    id="flashcard-count"
+                    min={5}
+                    max={50}
+                    step={5}
+                    value={flashcardCount}
+                    onValueChange={setFlashcardCount}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>5 cards</span>
+                    <span>25 cards</span>
+                    <span>50 cards</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  More flashcards will take longer to generate but provide more comprehensive coverage.
+                </p>
               </div>
 
               {/* Progress */}

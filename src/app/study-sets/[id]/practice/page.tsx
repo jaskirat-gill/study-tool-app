@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import { getStudySet } from '@/lib/storage';
 import { generateExamQuestions } from '@/lib/gemini-client';
 import { StudySet, ExamQuestion } from '@/types';
@@ -18,6 +20,7 @@ export default function PracticeExamPage() {
 
   const [studySet, setStudySet] = useState<StudySet | null>(null);
   const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
+  const [questionCount, setQuestionCount] = useState([10]); // Default to 10 questions
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -57,7 +60,7 @@ export default function PracticeExamPage() {
         .map(card => `Q: ${card.front}\nA: ${card.back}`)
         .join('\n\n');
 
-      const result = await generateExamQuestions(content, 10);
+      const result = await generateExamQuestions(content, questionCount[0]);
       
       if (result.error) {
         setError(result.error);
@@ -162,8 +165,37 @@ export default function PracticeExamPage() {
               
               <div className="space-y-2">
                 <p><strong>Number of flashcards:</strong> {studySet.flashcards.length}</p>
-                <p><strong>Exam questions:</strong> Up to 10 questions</p>
                 <p><strong>Question types:</strong> Multiple choice with explanations</p>
+              </div>
+
+              {/* Question Count Slider */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="question-count">Number of Questions</Label>
+                  <Badge variant="outline" className="text-sm">
+                    {questionCount[0]} questions
+                  </Badge>
+                </div>
+                <div className="px-3">
+                  <Slider
+                    id="question-count"
+                    min={5}
+                    max={25}
+                    step={1}
+                    value={questionCount}
+                    onValueChange={setQuestionCount}
+                    className="w-full"
+                    disabled={isGenerating}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>5 questions</span>
+                    <span>15 questions</span>
+                    <span>25 questions</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  More questions provide a more comprehensive assessment but take longer to complete.
+                </p>
               </div>
 
               {error && (
