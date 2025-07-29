@@ -35,8 +35,9 @@ export interface PracticeExam {
 export interface ExamQuestion {
   id: string;
   question: string;
-  options: string[];
-  correctAnswer: number; // index of correct option
+  type: 'multiple-choice' | 'fill-in-blank' | 'short-answer';
+  options?: string[]; // Only for multiple-choice
+  correctAnswer?: number | string; // index for multiple-choice, string for others
   explanation?: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }

@@ -25,14 +25,24 @@ export async function generateFlashcards(content: string, count: number = 10): P
   }
 }
 
-export async function generateExamQuestions(content: string, count: number = 5): Promise<GeminiResponse> {
+export async function generateExamQuestions(
+  content: string, 
+  multipleChoice: number = 5,
+  fillInBlank: number = 0,
+  shortAnswer: number = 0
+): Promise<GeminiResponse> {
   try {
     const response = await fetch('/api/generate-exam', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content, count }),
+      body: JSON.stringify({ 
+        content, 
+        multipleChoice,
+        fillInBlank,
+        shortAnswer
+      }),
     });
 
     if (!response.ok) {

@@ -21,9 +21,67 @@ async function callGeminiAPI(prompt: string): Promise<string> {
   }
 }
 
+function generatePromptForQuestionTypes(
+  content: string, 
+  mcCount: number, 
+  fibCount: number, 
+  saCount: number, 
+  chunkIndex?: number, 
+  totalChunks?: number
+): string {
+  const questionSpecs = [];
+  
+  if (mcCount > 0) {
+    questionSpecs.push(`${mcCount} multiple choice questions (each with exactly 4 options)`);
+  }
+  if (fibCount > 0) {
+    questionSpecs.push(`${fibCount} fill-in-the-blank questions (statements with one word or phrase missing)`);
+  }
+  if (saCount > 0) {
+    questionSpecs.push(`${saCount} short answer questions (requiring 1-2 sentence responses)`);
+  }
+
+  const chunkInfo = chunkIndex && totalChunks 
+    ? `This is chunk ${chunkIndex} of ${totalChunks} from a larger document. Focus on the content in this chunk specifically.\n\n`
+    : '';
+
+  return `You are an expert educational content creator. Generate exactly ${questionSpecs.join(', ')} from the following content. Include an explanation for each correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
+
+${chunkInfo}Content:
+${content}
+
+Respond ONLY with valid JSON in this exact format (no other text before or after):
+{
+  "examQuestions": [
+    {
+      "type": "multiple-choice",
+      "question": "Question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0,
+      "explanation": "Explanation of correct answer here",
+      "difficulty": "medium"
+    },
+    {
+      "type": "fill-in-blank",
+      "question": "Statement with _____ missing word or phrase",
+      "correctAnswer": "missing word or phrase",
+      "explanation": "Explanation here",
+      "difficulty": "medium"
+    },
+    {
+      "type": "short-answer",
+      "question": "Question requiring explanation",
+      "correctAnswer": "Expected answer content",
+      "explanation": "Explanation here",
+      "difficulty": "medium"
+    }
+  ]
+}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { content, count = 5 } = await request.json();
+    const { content, multipleChoice = 5, fillInBlank = 0, shortAnswer = 0 } = await request.json();
 
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
@@ -32,7 +90,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const questionCount = Number(count) || 5;
+    const mcCount = Number(multipleChoice) || 0;
+    const fibCount = Number(fillInBlank) || 0;
+    const saCount = Number(shortAnswer) || 0;
+    const totalQuestions = mcCount + fibCount + saCount;
+
+    if (totalQuestions === 0) {
+      return NextResponse.json(
+        { error: 'At least one question must be requested' },
+        { status: 400 }
+      );
+    }
 
     // Check if content needs chunking
     const tokenCount = estimateTokenCount(content);
@@ -40,8 +108,9 @@ export async function POST(request: NextRequest) {
 
     interface GeminiExamQuestion {
       question: string;
-      options: string[];
-      correctAnswer: number;
+      type: 'multiple-choice' | 'fill-in-blank' | 'short-answer';
+      options?: string[];
+      correctAnswer: number | string;
       explanation: string;
       difficulty: string;
     }
@@ -55,37 +124,24 @@ export async function POST(request: NextRequest) {
       const strategy = getOptimalChunkingStrategy(content.length);
       const chunks = chunkText(content, strategy);
       
-      // Distribute question count across chunks (reusing the flashcard distribution function)
-      const questionCounts = distributeFlashcardsAcrossChunks(chunks, questionCount);
+      // Distribute question counts across chunks proportionally
+      const mcCounts = distributeFlashcardsAcrossChunks(chunks, mcCount);
+      const fibCounts = distributeFlashcardsAcrossChunks(chunks, fibCount);
+      const saCounts = distributeFlashcardsAcrossChunks(chunks, saCount);
       
-      console.log(`Processing ${chunks.length} chunks with question distribution:`, questionCounts);
+      console.log(`Processing ${chunks.length} chunks with question distribution:`, 
+        { multipleChoice: mcCounts, fillInBlank: fibCounts, shortAnswer: saCounts });
 
       // Process each chunk
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const chunkQuestionCount = questionCounts[i];
+        const chunkMcCount = mcCounts[i];
+        const chunkFibCount = fibCounts[i];
+        const chunkSaCount = saCounts[i];
         
-        if (chunkQuestionCount === 0) continue;
+        if (chunkMcCount + chunkFibCount + chunkSaCount === 0) continue;
 
-        const prompt = `You are an expert educational content creator. Generate exactly ${chunkQuestionCount} multiple choice exam questions from the following content chunk. Each question should have exactly 4 options with one correct answer. Include an explanation for the correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
-
-This is chunk ${i + 1} of ${chunks.length} from a larger document. Focus on the content in this chunk specifically.
-
-Content:
-${chunk.content}
-
-Respond ONLY with valid JSON in this exact format (no other text before or after):
-{
-  "examQuestions": [
-    {
-      "question": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Explanation of correct answer here",
-      "difficulty": "medium"
-    }
-  ]
-}`;
+        const prompt = generatePromptForQuestionTypes(chunk.content, chunkMcCount, chunkFibCount, chunkSaCount, i + 1, chunks.length);
 
         try {
           // Call Gemini API directly instead of using CLI
@@ -126,23 +182,7 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
       }
     } else {
       // Process normally for smaller content
-      const prompt = `You are an expert educational content creator. Generate exactly ${questionCount} multiple choice exam questions from the following content. Each question should have exactly 4 options with one correct answer. Include an explanation for the correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
-
-Content:
-${content}
-
-Respond ONLY with valid JSON in this exact format (no other text before or after):
-{
-  "examQuestions": [
-    {
-      "question": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Explanation of correct answer here",
-      "difficulty": "medium"
-    }
-  ]
-}`;
+      const prompt = generatePromptForQuestionTypes(content, mcCount, fibCount, saCount);
 
       // Call Gemini API directly instead of using CLI
       const apiResponse = await callGeminiAPI(prompt);
@@ -174,12 +214,13 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
 
     // Add IDs to exam questions and ensure we don't exceed requested count
     const questionsWithIds = allQuestions
-      .slice(0, questionCount) // Ensure we don't exceed requested count
+      .slice(0, totalQuestions) // Ensure we don't exceed requested count
       .map((question: GeminiExamQuestion) => ({
         id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
         question: question.question || '',
-        options: question.options || [],
-        correctAnswer: question.correctAnswer || 0,
+        type: question.type || 'multiple-choice',
+        options: question.options || undefined,
+        correctAnswer: question.correctAnswer || (question.type === 'multiple-choice' ? 0 : ''),
         explanation: question.explanation || '',
         difficulty: question.difficulty || 'medium',
       }));

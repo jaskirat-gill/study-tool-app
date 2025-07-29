@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { getStudySet } from '@/lib/storage';
 import { generateExamQuestions } from '@/lib/gemini-client';
 import { StudySet, ExamQuestion } from '@/types';
@@ -20,9 +22,11 @@ export default function PracticeExamPage() {
 
   const [studySet, setStudySet] = useState<StudySet | null>(null);
   const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
-  const [questionCount, setQuestionCount] = useState([10]); // Default to 10 questions
+  const [multipleChoiceCount, setMultipleChoiceCount] = useState([5]); // Default to 5 MC questions
+  const [fillInBlankCount, setFillInBlankCount] = useState([0]); // Default to 0 FIB questions
+  const [shortAnswerCount, setShortAnswerCount] = useState([0]); // Default to 0 SA questions
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<(number | string)[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -60,7 +64,12 @@ export default function PracticeExamPage() {
         .map(card => `Q: ${card.front}\nA: ${card.back}`)
         .join('\n\n');
 
-      const result = await generateExamQuestions(content, questionCount[0]);
+      const result = await generateExamQuestions(
+        content, 
+        multipleChoiceCount[0], 
+        fillInBlankCount[0], 
+        shortAnswerCount[0]
+      );
       
       if (result.error) {
         setError(result.error);
@@ -69,7 +78,7 @@ export default function PracticeExamPage() {
 
       if (result.examQuestions) {
         setExamQuestions(result.examQuestions);
-        setSelectedAnswers(new Array(result.examQuestions.length).fill(-1));
+        setSelectedAnswers(new Array(result.examQuestions.length).fill(''));
         setCurrentQuestionIndex(0);
         setShowResults(false);
         setStartTime(new Date());
@@ -82,9 +91,9 @@ export default function PracticeExamPage() {
     }
   };
 
-  const handleAnswerSelect = (answerIndex: number) => {
+  const handleAnswerSelect = (answerValue: number | string) => {
     const newAnswers = [...selectedAnswers];
-    newAnswers[currentQuestionIndex] = answerIndex;
+    newAnswers[currentQuestionIndex] = answerValue;
     setSelectedAnswers(newAnswers);
   };
 
@@ -123,8 +132,18 @@ export default function PracticeExamPage() {
   const calculateScore = () => {
     let correct = 0;
     examQuestions.forEach((question, index) => {
-      if (selectedAnswers[index] === question.correctAnswer) {
-        correct++;
+      const userAnswer = selectedAnswers[index];
+      if (question.type === 'multiple-choice') {
+        if (userAnswer === question.correctAnswer) {
+          correct++;
+        }
+      } else {
+        // For fill-in-blank and short-answer, do basic string comparison
+        const correctAnswer = String(question.correctAnswer).toLowerCase().trim();
+        const userAnswerStr = String(userAnswer).toLowerCase().trim();
+        if (userAnswerStr === correctAnswer) {
+          correct++;
+        }
       }
     });
     return { correct, total: examQuestions.length, percentage: (correct / examQuestions.length) * 100 };
@@ -168,34 +187,105 @@ export default function PracticeExamPage() {
                 <p><strong>Question types:</strong> Multiple choice with explanations</p>
               </div>
 
-              {/* Question Count Slider */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="question-count">Number of Questions</Label>
-                  <Badge variant="outline" className="text-sm">
-                    {questionCount[0]} questions
-                  </Badge>
-                </div>
-                <div className="px-3">
-                  <Slider
-                    id="question-count"
-                    min={5}
-                    max={25}
-                    step={1}
-                    value={questionCount}
-                    onValueChange={setQuestionCount}
-                    className="w-full"
-                    disabled={isGenerating}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>5 questions</span>
-                    <span>15 questions</span>
-                    <span>25 questions</span>
+              {/* Question Type Configuration */}
+              <div className="space-y-6">
+                <div className="text-sm font-medium">Question Types</div>
+                
+                {/* Multiple Choice Questions */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="mc-count">Multiple Choice Questions</Label>
+                    <Badge variant="outline" className="text-sm">
+                      {multipleChoiceCount[0]} questions
+                    </Badge>
+                  </div>
+                  <div className="px-3">
+                    <Slider
+                      id="mc-count"
+                      min={0}
+                      max={50}
+                      step={1}
+                      value={multipleChoiceCount}
+                      onValueChange={setMultipleChoiceCount}
+                      className="w-full"
+                      disabled={isGenerating}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>0</span>
+                      <span>25</span>
+                      <span>50</span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  More questions provide a more comprehensive assessment but take longer to complete.
-                </p>
+
+                {/* Fill in the Blank Questions */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="fib-count">Fill-in-the-Blank Questions</Label>
+                    <Badge variant="outline" className="text-sm">
+                      {fillInBlankCount[0]} questions
+                    </Badge>
+                  </div>
+                  <div className="px-3">
+                    <Slider
+                      id="fib-count"
+                      min={0}
+                      max={50}
+                      step={1}
+                      value={fillInBlankCount}
+                      onValueChange={setFillInBlankCount}
+                      className="w-full"
+                      disabled={isGenerating}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>0</span>
+                      <span>25</span>
+                      <span>50</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Statements with missing words or phrases that you need to fill in.
+                  </p>
+                </div>
+
+                {/* Short Answer Questions */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="sa-count">Short Answer Questions</Label>
+                    <Badge variant="outline" className="text-sm">
+                      {shortAnswerCount[0]} questions
+                    </Badge>
+                  </div>
+                  <div className="px-3">
+                    <Slider
+                      id="sa-count"
+                      min={0}
+                      max={50}
+                      step={1}
+                      value={shortAnswerCount}
+                      onValueChange={setShortAnswerCount}
+                      className="w-full"
+                      disabled={isGenerating}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>0</span>
+                      <span>25</span>
+                      <span>50</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Questions requiring 1-2 sentence explanations or answers.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Total Questions:</strong> {multipleChoiceCount[0] + fillInBlankCount[0] + shortAnswerCount[0]}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Mix different question types to create a comprehensive assessment.
+                  </p>
+                </div>
               </div>
 
               {error && (
@@ -206,7 +296,11 @@ export default function PracticeExamPage() {
 
               <Button 
                 onClick={generateExam} 
-                disabled={isGenerating || studySet.flashcards.length === 0}
+                disabled={
+                  isGenerating || 
+                  studySet.flashcards.length === 0 ||
+                  (multipleChoiceCount[0] + fillInBlankCount[0] + shortAnswerCount[0]) === 0
+                }
                 className="w-full"
               >
                 {isGenerating ? 'Generating Exam...' : 'Generate Practice Exam'}
@@ -215,6 +309,12 @@ export default function PracticeExamPage() {
               {studySet.flashcards.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center">
                   This study set has no flashcards. Add some flashcards first.
+                </p>
+              )}
+
+              {(multipleChoiceCount[0] + fillInBlankCount[0] + shortAnswerCount[0]) === 0 && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Please select at least one question type.
                 </p>
               )}
             </CardContent>
@@ -279,7 +379,16 @@ export default function PracticeExamPage() {
           <div className="space-y-4">
             {examQuestions.map((question, index) => {
               const userAnswer = selectedAnswers[index];
-              const isCorrect = userAnswer === question.correctAnswer;
+              let isCorrect = false;
+              
+              if (question.type === 'multiple-choice') {
+                isCorrect = userAnswer === question.correctAnswer;
+              } else {
+                // For fill-in-blank and short-answer, do basic string comparison
+                const correctAnswer = String(question.correctAnswer).toLowerCase().trim();
+                const userAnswerStr = String(userAnswer).toLowerCase().trim();
+                isCorrect = userAnswerStr === correctAnswer;
+              }
               
               return (
                 <Card key={question.id} className="border-l-4" style={{
@@ -288,44 +397,72 @@ export default function PracticeExamPage() {
                   <CardHeader>
                     <CardTitle className="flex items-start justify-between text-base">
                       <span>Question {index + 1}: {question.question}</span>
-                      {isCorrect ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {question.type.replace('-', ' ')}
+                        </Badge>
+                        {isCorrect ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {question.options.map((option, optionIndex) => {
-                        let className = "p-3 rounded border ";
-                        if (optionIndex === question.correctAnswer) {
-                          className += "bg-green-50 border-green-200 text-green-800";
-                        } else if (optionIndex === userAnswer && userAnswer !== question.correctAnswer) {
-                          className += "bg-red-50 border-red-200 text-red-800";
-                        } else {
-                          className += "bg-gray-50 border-gray-200";
-                        }
+                    {question.type === 'multiple-choice' && question.options ? (
+                      <div className="space-y-2">
+                        {question.options.map((option, optionIndex) => {
+                          let className = "p-3 rounded border ";
+                          if (optionIndex === question.correctAnswer) {
+                            className += "bg-green-50 border-green-200 text-green-800";
+                          } else if (optionIndex === userAnswer && userAnswer !== question.correctAnswer) {
+                            className += "bg-red-50 border-red-200 text-red-800";
+                          } else {
+                            className += "bg-gray-50 border-gray-200";
+                          }
 
-                        return (
-                          <div key={optionIndex} className={className}>
-                            <div className="flex items-center justify-between">
-                              <span>{option}</span>
-                              {optionIndex === question.correctAnswer && (
-                                <Badge variant="outline" className="bg-green-100 text-green-800">
-                                  Correct
-                                </Badge>
-                              )}
-                              {optionIndex === userAnswer && userAnswer !== question.correctAnswer && (
-                                <Badge variant="outline" className="bg-red-100 text-red-800">
-                                  Your Answer
-                                </Badge>
-                              )}
+                          return (
+                            <div key={optionIndex} className={className}>
+                              <div className="flex items-center justify-between">
+                                <span>{option}</span>
+                                {optionIndex === question.correctAnswer && (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800">
+                                    Correct
+                                  </Badge>
+                                )}
+                                {optionIndex === userAnswer && userAnswer !== question.correctAnswer && (
+                                  <Badge variant="outline" className="bg-red-100 text-red-800">
+                                    Your Answer
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded">
+                          <p className="text-sm font-medium text-green-800 mb-1">Correct Answer:</p>
+                          <p className="text-sm text-green-700">{String(question.correctAnswer)}</p>
+                        </div>
+                        <div className={`p-3 border rounded ${
+                          isCorrect 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
+                        }`}>
+                          <p className={`text-sm font-medium mb-1 ${
+                            isCorrect ? 'text-green-800' : 'text-red-800'
+                          }`}>Your Answer:</p>
+                          <p className={`text-sm ${
+                            isCorrect ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            {userAnswer || '(No answer provided)'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     
                     {question.explanation && (
                       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
@@ -345,7 +482,10 @@ export default function PracticeExamPage() {
 
   const currentQuestion = examQuestions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / examQuestions.length) * 100;
-  const answeredQuestions = selectedAnswers.filter(answer => answer !== -1).length;
+  const answeredQuestions = selectedAnswers.filter(answer => {
+    if (typeof answer === 'number') return answer !== -1;
+    return answer !== '' && answer !== null && answer !== undefined;
+  }).length;
 
   return (
     <div className="container mx-auto py-8">
@@ -384,34 +524,64 @@ export default function PracticeExamPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Question {currentQuestionIndex + 1}</span>
-              <Badge variant="outline">
-                {currentQuestion.difficulty}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {currentQuestion.type.replace('-', ' ')}
+                </Badge>
+                <Badge variant="outline">
+                  {currentQuestion.difficulty}
+                </Badge>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-lg mb-6">{currentQuestion.question}</p>
             
-            <div className="space-y-3">
-              {currentQuestion.options.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  className={`w-full p-4 text-left rounded-lg border-2 transition-colors ${
-                    selectedAnswers[currentQuestionIndex] === index
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <span className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 mr-3 flex items-center justify-center text-sm font-medium">
-                      {String.fromCharCode(65 + index)}
-                    </span>
-                    <span>{option}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {currentQuestion.type === 'multiple-choice' && currentQuestion.options ? (
+              <div className="space-y-3">
+                {currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(index)}
+                    className={`w-full p-4 text-left rounded-lg border-2 transition-colors ${
+                      selectedAnswers[currentQuestionIndex] === index
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <span className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 mr-3 flex items-center justify-center text-sm font-medium">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      <span>{option}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : currentQuestion.type === 'fill-in-blank' ? (
+              <div className="space-y-3">
+                <Label htmlFor="answer-input">Fill in the missing word or phrase:</Label>
+                <Input
+                  id="answer-input"
+                  type="text"
+                  placeholder="Type your answer here..."
+                  value={String(selectedAnswers[currentQuestionIndex] || '')}
+                  onChange={(e) => handleAnswerSelect(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Label htmlFor="answer-textarea">Provide a short answer (1-2 sentences):</Label>
+                <Textarea
+                  id="answer-textarea"
+                  placeholder="Type your answer here..."
+                  value={String(selectedAnswers[currentQuestionIndex] || '')}
+                  onChange={(e) => handleAnswerSelect(e.target.value)}
+                  className="w-full min-h-[100px]"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -436,7 +606,11 @@ export default function PracticeExamPage() {
             ) : (
               <Button
                 onClick={goToNextQuestion}
-                disabled={selectedAnswers[currentQuestionIndex] === -1}
+                disabled={
+                  currentQuestion.type === 'multiple-choice' 
+                    ? selectedAnswers[currentQuestionIndex] === '' || selectedAnswers[currentQuestionIndex] === undefined
+                    : !selectedAnswers[currentQuestionIndex] || String(selectedAnswers[currentQuestionIndex]).trim() === ''
+                }
               >
                 Next
               </Button>
