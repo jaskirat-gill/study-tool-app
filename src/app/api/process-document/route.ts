@@ -1,5 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper function to safely import and use pdf-parse
+async function parsePDF(buffer: Buffer): Promise<string> {
+  try {
+    console.log('Attempting to parse PDF buffer of size:', buffer.length);
+    
+    // Import pdf-parse dynamically
+    const pdfParse = await import('pdf-parse');
+    
+    // Handle different export formats and call the parser
+    const parseFunction = pdfParse.default;
+    const pdfData = await parseFunction(buffer);
+    
+    if (!pdfData || !pdfData.text) {
+      throw new Error('No text content found in PDF');
+    }
+    
+    console.log('Successfully parsed PDF, extracted text length:', pdfData.text.length);
+    return pdfData.text;
+  } catch (error) {
+    console.error('PDF parsing error:', error);
+    // Provide more specific error information
+    if (error instanceof Error) {
+      throw new Error(`Failed to parse PDF file: ${error.message}`);
+    }
+    throw new Error('Failed to parse PDF file: Unknown error');
+  }
+}
+
+// Helper function to safely import and use mammoth
+async function parseDocx(buffer: Buffer): Promise<string> {
+  try {
+    const mammoth = await import('mammoth');
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
+  } catch (error) {
+    console.error('DOCX parsing error:', error);
+    throw new Error('Failed to parse DOCX file');
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -31,22 +71,18 @@ export async function POST(request: NextRequest) {
         // Process TXT files
         content = await file.text();
       } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
-        // Process PDF files with dynamic import
-        const pdfParse = await import('pdf-parse');
+        // Process PDF files using helper function
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const pdfData = await pdfParse.default(buffer);
-        content = pdfData.text;
+        content = await parsePDF(buffer);
       } else if (
         fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
         fileName.endsWith('.docx')
       ) {
-        // Process DOCX files with dynamic import
-        const mammoth = await import('mammoth');
+        // Process DOCX files using helper function
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const result = await mammoth.extractRawText({ buffer });
-        content = result.value;
+        content = await parseDocx(buffer);
       } else {
         return NextResponse.json(
           { error: 'Unsupported file type. Please upload a TXT, PDF, or DOCX file.' },
