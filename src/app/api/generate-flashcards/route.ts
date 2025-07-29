@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { promises as fs } from 'fs';
-import path from 'path';
-import os from 'os';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { chunkText, estimateTokenCount, getOptimalChunkingStrategy, distributeFlashcardsAcrossChunks } from '@/lib/text-chunker';
 
-const execAsync = promisify(exec);
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+async function callGeminiAPI(prompt: string): Promise<string> {
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,33 +79,16 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
 }`;
 
         try {
-          // Write prompt to temporary file and use it with stdin to avoid all escaping issues
-          const tempDir = os.tmpdir();
-          const tempFile = path.join(tempDir, `prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.txt`);
-          
-          await fs.writeFile(tempFile, prompt, 'utf8');
-          
-          // Use stdin with cat/type command to pass the prompt
-          const isWindows = process.platform === 'win32';
-          const catCommand = isWindows ? 'type' : 'cat';
-          const command = `${catCommand} "${tempFile}" | gemini -p ""`;
+          // Call Gemini API directly instead of using CLI
+          const apiResponse = await callGeminiAPI(prompt);
 
-          // Execute the Gemini CLI command
-          const result = await execAsync(command, {
-            timeout: 60000, // 60 second timeout
-            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-          });
+          let output = apiResponse.trim();
 
-          // Clean up the temporary file
-          await fs.unlink(tempFile).catch(() => {}); // Ignore cleanup errors
-
-          let output = result.stdout.trim();
-
-          // More robust JSON extraction - handle Gemini CLI output
+          // More robust JSON extraction - handle Gemini API output
           // Remove common non-JSON prefixes
-          output = output.replace(/^Loaded cached credentials\.\s*/i, '');
-          output = output.replace(/^Loading model\.\.\.\s*/i, '');
-          output = output.replace(/^Generating response\.\.\.\s*/i, '');
+          output = output.replace(/^```json\s*/i, '');
+          output = output.replace(/^```\s*/i, '');
+          output = output.replace(/```\s*$/i, '');
           
           // Find JSON boundaries more reliably
           const jsonStart = output.indexOf('{');
@@ -142,33 +133,16 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
   ]
 }`;
 
-      // Write prompt to temporary file and use it with stdin to avoid all escaping issues
-      const tempDir = os.tmpdir();
-      const tempFile = path.join(tempDir, `prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.txt`);
-      
-      await fs.writeFile(tempFile, prompt, 'utf8');
-      
-      // Use stdin with cat/type command to pass the prompt
-      const isWindows = process.platform === 'win32';
-      const catCommand = isWindows ? 'type' : 'cat';
-      const command = `${catCommand} "${tempFile}" | gemini -p ""`;
+      // Call Gemini API directly instead of using CLI
+      const apiResponse = await callGeminiAPI(prompt);
 
-      // Execute the Gemini CLI command
-      const result = await execAsync(command, {
-        timeout: 60000, // 60 second timeout
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-      });
-
-      // Clean up the temporary file
-      await fs.unlink(tempFile).catch(() => {}); // Ignore cleanup errors
-
-      let output = result.stdout.trim();
+      let output = apiResponse.trim();
  
-      // More robust JSON extraction - handle Gemini CLI output
+      // More robust JSON extraction - handle Gemini API output
       // Remove common non-JSON prefixes
-      output = output.replace(/^Loaded cached credentials\.\s*/i, '');
-      output = output.replace(/^Loading model\.\.\.\s*/i, '');
-      output = output.replace(/^Generating response\.\.\.\s*/i, '');
+      output = output.replace(/^```json\s*/i, '');
+      output = output.replace(/^```\s*/i, '');
+      output = output.replace(/```\s*$/i, '');
       
       // Find JSON boundaries more reliably
       const jsonStart = output.indexOf('{');
@@ -204,7 +178,7 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
     return NextResponse.json({ flashcards: flashcardsWithIds });
 
   } catch (error) {
-    console.error('Gemini CLI Error:', error);
+    console.error('Gemini API Error:', error);
     return NextResponse.json(
       { error: 'Failed to generate flashcards. Please try again.' },
       { status: 500 }

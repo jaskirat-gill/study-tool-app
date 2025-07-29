@@ -17,7 +17,7 @@ A modern Next.js application that transforms your documents into interactive fla
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **UI Components**: Shadcn UI
-- **AI Integration**: Gemini CLI (free tier)
+- **AI Integration**: Google Gemini API
 - **Storage**: Local Storage / IndexedDB
 
 ## Getting Started
@@ -26,7 +26,7 @@ A modern Next.js application that transforms your documents into interactive fla
 
 - Node.js 18+ 
 - npm, yarn, pnpm, or bun
-- Gemini CLI (for AI features)
+- Google Gemini API key (for AI features)
 
 ### Installation
 
@@ -84,17 +84,18 @@ src/
 
 ## AI Integration
 
-The application uses the Gemini CLI for AI-powered content generation:
+The application uses the Google Gemini API for AI-powered content generation:
 
 - **Flashcard Generation**: Extracts key concepts and creates Q&A pairs
 - **Practice Exam Creation**: Generates multiple-choice questions
 - **Content Analysis**: Identifies important topics and themes
 
-### Setting up Gemini CLI
+### Setting up Gemini API
 
-1. Install the Gemini CLI following the official documentation
-2. Ensure it's accessible in your system PATH
-3. The application will use subprocess calls to interact with the CLI
+1. Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Copy `.env.example` to `.env.local`
+3. Replace `your_gemini_api_key_here` with your actual API key
+4. The application will automatically use the API key from environment variables
 
 ## Contributing
 
