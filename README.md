@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Study Tool - AI-Powered Flashcards
+
+A modern Next.js application that transforms your documents into interactive flashcards and practice exams using AI.
+
+## Features
+
+- **Document Upload**: Support for PDF, DOCX, and TXT files
+- **AI-Powered Generation**: Uses Gemini CLI to create flashcards and practice questions
+- **Interactive Study Mode**: Quizlet-style flashcard interface
+- **Practice Exams**: Multiple-choice questions generated from your content
+- **Study Progress Tracking**: Track your performance and accuracy
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn UI
+- **AI Integration**: Gemini CLI (free tier)
+- **Storage**: Local Storage / IndexedDB
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- npm, yarn, pnpm, or bun
+- Gemini CLI (for AI features)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd study-tool-app
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+3. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Upload a Document**: Go to the Upload page and select a PDF, DOCX, or TXT file
+2. **Generate Flashcards**: The AI will analyze your document and create flashcards
+3. **Study**: Use the interactive flashcard interface to study your material
+4. **Take Practice Exams**: Generate and take multiple-choice practice exams
+5. **Track Progress**: Monitor your accuracy and study statistics
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── upload/            # Document upload page
+│   ├── study-sets/        # Study sets management
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   └── ui/               # Shadcn UI components
+├── lib/                  # Utility functions
+│   ├── document-processor.ts  # File processing
+│   ├── gemini-client.ts      # AI integration
+│   ├── storage.ts            # Local storage management
+│   └── utils.ts              # General utilities
+└── types/                # TypeScript type definitions
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## AI Integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application uses the Gemini CLI for AI-powered content generation:
 
-## Deploy on Vercel
+- **Flashcard Generation**: Extracts key concepts and creates Q&A pairs
+- **Practice Exam Creation**: Generates multiple-choice questions
+- **Content Analysis**: Identifies important topics and themes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Setting up Gemini CLI
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Install the Gemini CLI following the official documentation
+2. Ensure it's accessible in your system PATH
+3. The application will use subprocess calls to interact with the CLI
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Roadmap
+
+- [ ] Cloud storage integration
+- [ ] User authentication
+- [ ] Advanced study algorithms (spaced repetition)
+- [ ] Study statistics and analytics
+- [ ] Collaborative study sets
+- [ ] Mobile app version
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on GitHub.
