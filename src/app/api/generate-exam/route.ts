@@ -26,6 +26,7 @@ function generatePromptForQuestionTypes(
   mcCount: number, 
   fibCount: number, 
   saCount: number, 
+  fillInBlankWordBank?: string[],
   chunkIndex?: number, 
   totalChunks?: number
 ): string {
@@ -35,7 +36,11 @@ function generatePromptForQuestionTypes(
     questionSpecs.push(`${mcCount} multiple choice questions (each with exactly 4 options)`);
   }
   if (fibCount > 0) {
-    questionSpecs.push(`${fibCount} fill-in-the-blank questions (statements with one word or phrase missing)`);
+    if (fillInBlankWordBank && fillInBlankWordBank.length > 0) {
+      questionSpecs.push(`${fibCount} fill-in-the-blank questions (statements with one word or phrase missing, MUST use words from this word bank: [${fillInBlankWordBank.join(', ')}])`);
+    } else {
+      questionSpecs.push(`${fibCount} fill-in-the-blank questions (statements with one word or phrase missing)`);
+    }
   }
   if (saCount > 0) {
     questionSpecs.push(`${saCount} short answer questions (requiring 1-2 sentence responses)`);
@@ -45,9 +50,13 @@ function generatePromptForQuestionTypes(
     ? `This is chunk ${chunkIndex} of ${totalChunks} from a larger document. Focus on the content in this chunk specifically.\n\n`
     : '';
 
+  const wordBankInstruction = fillInBlankWordBank && fillInBlankWordBank.length > 0 && fibCount > 0
+    ? `\nIMPORTANT: For fill-in-the-blank questions, you MUST create questions that test the specific words provided in the word bank: [${fillInBlankWordBank.join(', ')}]. Each fill-in-the-blank question should have one of these words as the correct answer. Create contextually appropriate sentences from the content where these words would naturally fit as the missing term.\n\n`
+    : '';
+
   return `You are an expert educational content creator. Generate exactly ${questionSpecs.join(', ')} from the following content. Include an explanation for each correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
 
-${chunkInfo}Content:
+${chunkInfo}${wordBankInstruction}Content:
 ${content}
 
 Respond ONLY with valid JSON in this exact format (no other text before or after):
@@ -81,7 +90,7 @@ Respond ONLY with valid JSON in this exact format (no other text before or after
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, multipleChoice = 5, fillInBlank = 0, shortAnswer = 0 } = await request.json();
+    const { content, multipleChoice = 5, fillInBlank = 0, shortAnswer = 0, fillInBlankWordBank } = await request.json();
 
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
@@ -94,6 +103,11 @@ export async function POST(request: NextRequest) {
     const fibCount = Number(fillInBlank) || 0;
     const saCount = Number(shortAnswer) || 0;
     const totalQuestions = mcCount + fibCount + saCount;
+
+    // Process the word bank if provided
+    const wordBank = fillInBlankWordBank && Array.isArray(fillInBlankWordBank) 
+      ? fillInBlankWordBank.filter((word: string) => typeof word === 'string' && word.trim() !== '')
+      : undefined;
 
     if (totalQuestions === 0) {
       return NextResponse.json(
@@ -141,7 +155,7 @@ export async function POST(request: NextRequest) {
         
         if (chunkMcCount + chunkFibCount + chunkSaCount === 0) continue;
 
-        const prompt = generatePromptForQuestionTypes(chunk.content, chunkMcCount, chunkFibCount, chunkSaCount, i + 1, chunks.length);
+        const prompt = generatePromptForQuestionTypes(chunk.content, chunkMcCount, chunkFibCount, chunkSaCount, wordBank, i + 1, chunks.length);
 
         try {
           // Call Gemini API directly instead of using CLI
@@ -182,7 +196,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Process normally for smaller content
-      const prompt = generatePromptForQuestionTypes(content, mcCount, fibCount, saCount);
+      const prompt = generatePromptForQuestionTypes(content, mcCount, fibCount, saCount, wordBank);
 
       // Call Gemini API directly instead of using CLI
       const apiResponse = await callGeminiAPI(prompt);

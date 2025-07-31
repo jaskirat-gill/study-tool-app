@@ -29,7 +29,8 @@ export async function generateExamQuestions(
   content: string, 
   multipleChoice: number = 5,
   fillInBlank: number = 0,
-  shortAnswer: number = 0
+  shortAnswer: number = 0,
+  fillInBlankWordBank?: string[]
 ): Promise<GeminiResponse> {
   try {
     const response = await fetch('/api/generate-exam', {
@@ -41,7 +42,8 @@ export async function generateExamQuestions(
         content, 
         multipleChoice,
         fillInBlank,
-        shortAnswer
+        shortAnswer,
+        fillInBlankWordBank
       }),
     });
 

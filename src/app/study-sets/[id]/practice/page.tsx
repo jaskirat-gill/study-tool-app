@@ -25,6 +25,7 @@ export default function PracticeExamPage() {
   const [multipleChoiceCount, setMultipleChoiceCount] = useState([5]); // Default to 5 MC questions
   const [fillInBlankCount, setFillInBlankCount] = useState([0]); // Default to 0 FIB questions
   const [shortAnswerCount, setShortAnswerCount] = useState([0]); // Default to 0 SA questions
+  const [fillInBlankWordBank, setFillInBlankWordBank] = useState<string>(''); // Word bank for fill-in-blank questions
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<(number | string)[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -64,11 +65,17 @@ export default function PracticeExamPage() {
         .map(card => `Q: ${card.front}\nA: ${card.back}`)
         .join('\n\n');
 
+      // Process word bank if provided
+      const wordBankArray = fillInBlankWordBank.trim() 
+        ? fillInBlankWordBank.split(',').map(word => word.trim()).filter(word => word.length > 0)
+        : undefined;
+
       const result = await generateExamQuestions(
         content, 
         multipleChoiceCount[0], 
         fillInBlankCount[0], 
-        shortAnswerCount[0]
+        shortAnswerCount[0],
+        wordBankArray
       );
       
       if (result.error) {
@@ -243,6 +250,27 @@ export default function PracticeExamPage() {
                       <span>50</span>
                     </div>
                   </div>
+                  
+                  {/* Word Bank Input - Only show when fill-in-blank questions are selected */}
+                  {fillInBlankCount[0] > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="word-bank" className="text-sm">
+                        Word Bank (Optional)
+                      </Label>
+                      <Textarea
+                        id="word-bank"
+                        placeholder="Enter words separated by commas (e.g. photosynthesis, chlorophyll, oxygen, glucose)"
+                        value={fillInBlankWordBank}
+                        onChange={(e) => setFillInBlankWordBank(e.target.value)}
+                        disabled={isGenerating}
+                        className="min-h-[80px] text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        If provided, fill-in-blank questions will test these specific words. Leave empty to generate questions automatically from the content.
+                      </p>
+                    </div>
+                  )}
+                  
                   <p className="text-xs text-muted-foreground">
                     Statements with missing words or phrases that you need to fill in.
                   </p>
