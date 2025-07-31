@@ -40,6 +40,7 @@ export interface ExamQuestion {
   correctAnswer?: number | string; // index for multiple-choice, string for others
   explanation?: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  manualScore?: number; // For fill-in-blank and short-answer: 0 (incorrect), 1 (correct), undefined (not scored yet)
 }
 
 export interface StudySession {

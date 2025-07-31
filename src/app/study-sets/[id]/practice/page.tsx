@@ -28,7 +28,9 @@ export default function PracticeExamPage() {
   const [fillInBlankWordBank, setFillInBlankWordBank] = useState<string>(''); // Word bank for fill-in-blank questions
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<(number | string)[]>([]);
+  const [manualScores, setManualScores] = useState<{[key: number]: number}>({});
   const [showResults, setShowResults] = useState(false);
+  const [showManualMarking, setShowManualMarking] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -86,8 +88,10 @@ export default function PracticeExamPage() {
       if (result.examQuestions) {
         setExamQuestions(result.examQuestions);
         setSelectedAnswers(new Array(result.examQuestions.length).fill(''));
+        setManualScores({});
         setCurrentQuestionIndex(0);
         setShowResults(false);
+        setShowManualMarking(false);
         setStartTime(new Date());
         setTimeElapsed(0);
       }
@@ -117,14 +121,33 @@ export default function PracticeExamPage() {
   };
 
   const submitExam = () => {
+    const score = calculateScore();
+    if (score.needsManualMarking) {
+      setShowManualMarking(true);
+    } else {
+      setShowResults(true);
+    }
+  };
+
+  const handleManualScore = (questionIndex: number, score: number) => {
+    setManualScores(prev => ({
+      ...prev,
+      [questionIndex]: score
+    }));
+  };
+
+  const finishManualMarking = () => {
+    setShowManualMarking(false);
     setShowResults(true);
   };
 
   const resetExam = () => {
     setExamQuestions([]);
     setSelectedAnswers([]);
+    setManualScores({});
     setCurrentQuestionIndex(0);
     setShowResults(false);
+    setShowManualMarking(false);
     setStartTime(null);
     setTimeElapsed(0);
     setError(null);
@@ -138,22 +161,37 @@ export default function PracticeExamPage() {
 
   const calculateScore = () => {
     let correct = 0;
+    let total = 0;
+    
     examQuestions.forEach((question, index) => {
       const userAnswer = selectedAnswers[index];
+      
       if (question.type === 'multiple-choice') {
+        total++;
         if (userAnswer === question.correctAnswer) {
           correct++;
         }
       } else {
-        // For fill-in-blank and short-answer, do basic string comparison
-        const correctAnswer = String(question.correctAnswer).toLowerCase().trim();
-        const userAnswerStr = String(userAnswer).toLowerCase().trim();
-        if (userAnswerStr === correctAnswer) {
-          correct++;
+        // For fill-in-blank and short-answer, only count if manually scored
+        if (manualScores[index] !== undefined) {
+          total++;
+          if (manualScores[index] === 1) {
+            correct++;
+          }
         }
       }
     });
-    return { correct, total: examQuestions.length, percentage: (correct / examQuestions.length) * 100 };
+    
+    return { 
+      correct, 
+      total, 
+      percentage: total > 0 ? (correct / total) * 100 : 0,
+      needsManualMarking: examQuestions.some((q, i) => 
+        (q.type === 'fill-in-blank' || q.type === 'short-answer') && 
+        selectedAnswers[i] && 
+        manualScores[i] === undefined
+      )
+    };
   };
 
   if (!studySet) {
@@ -352,6 +390,136 @@ export default function PracticeExamPage() {
     );
   }
 
+  if (showManualMarking) {
+    const questionsToMark = examQuestions
+      .map((question, index) => ({ question, index }))
+      .filter(({ question, index }) => 
+        (question.type === 'fill-in-blank' || question.type === 'short-answer') && 
+        selectedAnswers[index] && 
+        manualScores[index] === undefined
+      );
+
+    const allMarked = questionsToMark.every(({ index }) => manualScores[index] !== undefined);
+
+    return (
+      <div className="container mx-auto py-8">
+        <div className="max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => setShowManualMarking(false)}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Exam
+          </Button>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Manual Marking Required</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Please review and mark the following fill-in-blank and short answer questions manually.
+              </p>
+              <div className="text-sm text-muted-foreground mb-6">
+                Progress: {questionsToMark.length - questionsToMark.filter(({ index }) => manualScores[index] === undefined).length} of {questionsToMark.length} questions marked
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            {questionsToMark.map(({ question, index }) => {
+              const userAnswer = selectedAnswers[index];
+              const isMarked = manualScores[index] !== undefined;
+              
+              return (
+                <Card key={question.id} className={`border-l-4 ${
+                  isMarked 
+                    ? (manualScores[index] === 1 ? 'border-l-green-500' : 'border-l-red-500')
+                    : 'border-l-yellow-500'
+                }`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-start justify-between text-base">
+                      <span>Question {index + 1}: {question.question}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {question.type.replace('-', ' ')}
+                        </Badge>
+                        {isMarked && (
+                          manualScores[index] === 1 ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )
+                        )}
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded">
+                          <p className="text-sm font-medium text-green-800 mb-1">Correct Answer:</p>
+                          <p className="text-sm text-green-700">{String(question.correctAnswer)}</p>
+                        </div>
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                          <p className="text-sm font-medium text-blue-800 mb-1">Student Answer:</p>
+                          <p className="text-sm text-blue-700">
+                            {userAnswer || '(No answer provided)'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {question.explanation && (
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                          <p className="text-sm font-medium text-gray-800 mb-1">Explanation:</p>
+                          <p className="text-sm text-gray-700">{question.explanation}</p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-center gap-4">
+                        <Button
+                          variant={manualScores[index] === 0 ? "destructive" : "outline"}
+                          onClick={() => handleManualScore(index, 0)}
+                          className="flex items-center gap-2"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Mark Incorrect
+                        </Button>
+                        <Button
+                          variant={manualScores[index] === 1 ? "default" : "outline"}
+                          onClick={() => handleManualScore(index, 1)}
+                          className="flex items-center gap-2"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Mark Correct
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              <div className="flex justify-center">
+                <Button
+                  onClick={finishManualMarking}
+                  disabled={!allMarked}
+                  size="lg"
+                >
+                  {allMarked ? 'View Results' : `Mark Remaining ${questionsToMark.filter(({ index }) => manualScores[index] === undefined).length} Questions`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (showResults) {
     const score = calculateScore();
     return (
@@ -408,19 +576,22 @@ export default function PracticeExamPage() {
             {examQuestions.map((question, index) => {
               const userAnswer = selectedAnswers[index];
               let isCorrect = false;
+              let wasAnswered = true;
               
               if (question.type === 'multiple-choice') {
                 isCorrect = userAnswer === question.correctAnswer;
               } else {
-                // For fill-in-blank and short-answer, do basic string comparison
-                const correctAnswer = String(question.correctAnswer).toLowerCase().trim();
-                const userAnswerStr = String(userAnswer).toLowerCase().trim();
-                isCorrect = userAnswerStr === correctAnswer;
+                // For fill-in-blank and short-answer, use manual scoring
+                if (manualScores[index] !== undefined) {
+                  isCorrect = manualScores[index] === 1;
+                } else {
+                  wasAnswered = false;
+                }
               }
               
               return (
                 <Card key={question.id} className="border-l-4" style={{
-                  borderLeftColor: isCorrect ? '#10b981' : '#ef4444'
+                  borderLeftColor: !wasAnswered ? '#f59e0b' : (isCorrect ? '#10b981' : '#ef4444')
                 }}>
                   <CardHeader>
                     <CardTitle className="flex items-start justify-between text-base">
@@ -429,10 +600,16 @@ export default function PracticeExamPage() {
                         <Badge variant="outline" className="text-xs">
                           {question.type.replace('-', ' ')}
                         </Badge>
-                        {isCorrect ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        {!wasAnswered ? (
+                          <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                            Not Scored
+                          </Badge>
                         ) : (
-                          <XCircle className="h-5 w-5 text-red-600" />
+                          isCorrect ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )
                         )}
                       </div>
                     </CardTitle>
@@ -476,18 +653,36 @@ export default function PracticeExamPage() {
                           <p className="text-sm text-green-700">{String(question.correctAnswer)}</p>
                         </div>
                         <div className={`p-3 border rounded ${
-                          isCorrect 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-red-50 border-red-200'
+                          !wasAnswered
+                            ? 'bg-yellow-50 border-yellow-200'
+                            : isCorrect 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
                         }`}>
                           <p className={`text-sm font-medium mb-1 ${
-                            isCorrect ? 'text-green-800' : 'text-red-800'
+                            !wasAnswered 
+                              ? 'text-yellow-800'
+                              : isCorrect ? 'text-green-800' : 'text-red-800'
                           }`}>Your Answer:</p>
                           <p className={`text-sm ${
-                            isCorrect ? 'text-green-700' : 'text-red-700'
+                            !wasAnswered 
+                              ? 'text-yellow-700'
+                              : isCorrect ? 'text-green-700' : 'text-red-700'
                           }`}>
                             {userAnswer || '(No answer provided)'}
                           </p>
+                          {!wasAnswered && (
+                            <p className="text-xs text-yellow-600 mt-1">
+                              This question was not manually scored
+                            </p>
+                          )}
+                          {wasAnswered && (
+                            <p className="text-xs mt-1" style={{
+                              color: isCorrect ? '#059669' : '#dc2626'
+                            }}>
+                              Manually marked as {isCorrect ? 'correct' : 'incorrect'}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
