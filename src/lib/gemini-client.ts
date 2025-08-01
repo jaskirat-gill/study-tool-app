@@ -61,3 +61,28 @@ export async function generateExamQuestions(
     };
   }
 }
+
+export async function generateStudyNotes(content: string): Promise<{ notes?: string; error?: string }> {
+  try {
+    const response = await fetch('/api/generate-notes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate notes');
+    }
+
+    const data = await response.json();
+    return { notes: data.notes };
+
+  } catch (error) {
+    return { 
+      error: `Error generating notes: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
+  }
+}

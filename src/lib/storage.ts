@@ -1,7 +1,8 @@
-import { StudySet, StudySession } from '@/types';
+import { StudySet, StudySession, StudyNotes } from '@/types';
 
 const STUDY_SETS_KEY = 'study-tool-sets';
 const STUDY_SESSIONS_KEY = 'study-tool-sessions';
+const STUDY_NOTES_KEY = 'study-tool-notes';
 
 export function saveStudySet(studySet: StudySet): void {
   try {
@@ -131,4 +132,54 @@ export function importStudySet(file: File): Promise<StudySet> {
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsText(file);
   });
+}
+
+// Notes storage functions
+export function saveStudyNotes(notes: StudyNotes): void {
+  try {
+    const existingNotes = getStudyNotes();
+    const updatedNotes = existingNotes.filter(note => note.id !== notes.id);
+    updatedNotes.push(notes);
+    
+    localStorage.setItem(STUDY_NOTES_KEY, JSON.stringify(updatedNotes));
+  } catch (error) {
+    console.error('Error saving study notes:', error);
+  }
+}
+
+export function getStudyNotes(): StudyNotes[] {
+  try {
+    const stored = localStorage.getItem(STUDY_NOTES_KEY);
+    if (!stored) return [];
+    
+    const notes = JSON.parse(stored);
+    return notes.map((note: Partial<StudyNotes>) => ({
+      ...note,
+      created: new Date(note.created!),
+      lastModified: new Date(note.lastModified!),
+    })) as StudyNotes[];
+  } catch (error) {
+    console.error('Error loading study notes:', error);
+    return [];
+  }
+}
+
+export function getStudyNote(id: string): StudyNotes | null {
+  try {
+    const notes = getStudyNotes();
+    return notes.find(note => note.id === id) || null;
+  } catch (error) {
+    console.error('Error loading study note:', error);
+    return null;
+  }
+}
+
+export function deleteStudyNote(id: string): void {
+  try {
+    const existingNotes = getStudyNotes();
+    const updatedNotes = existingNotes.filter(note => note.id !== id);
+    localStorage.setItem(STUDY_NOTES_KEY, JSON.stringify(updatedNotes));
+  } catch (error) {
+    console.error('Error deleting study note:', error);
+  }
 }

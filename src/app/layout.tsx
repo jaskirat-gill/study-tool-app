@@ -42,6 +42,9 @@ export default function RootLayout({
                 <Link href="/study-sets" className="text-muted-foreground hover:text-foreground transition-colors">
                   Study Sets
                 </Link>
+                <Link href="/notes" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Notes
+                </Link>
               </nav>
             </div>
           </div>

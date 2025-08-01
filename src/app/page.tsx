@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, BookOpen, GraduationCap, Zap } from "lucide-react";
+import { Upload, BookOpen, GraduationCap, Zap, FileText } from "lucide-react";
 
 export default function Home() {
   return (
@@ -15,7 +15,7 @@ export default function Home() {
           Upload your documents and let AI generate flashcards and practice exams 
           to help you study more effectively.
         </p>
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center space-x-4 flex-wrap gap-2">
           <Button asChild size="lg">
             <Link href="/upload">
               <Upload className="mr-2 h-4 w-4" />
@@ -28,11 +28,17 @@ export default function Home() {
               Browse Study Sets
             </Link>
           </Button>
+          <Button variant="outline" asChild size="lg">
+            <Link href="/notes/generate">
+              <FileText className="mr-2 h-4 w-4" />
+              Generate Notes
+            </Link>
+          </Button>
         </div>
       </div>
 
       {/* Features Section */}
-      <div className="grid md:grid-cols-3 gap-6 py-12">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 py-12">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -80,6 +86,23 @@ export default function Home() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Test your knowledge with AI-generated questions that adapt to your study material.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="mr-2 h-5 w-5" />
+              Study Notes
+            </CardTitle>
+            <CardDescription>
+              Generate comprehensive review notes from any content in your clipboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Transform clipboard content into organized study notes with key concepts and summaries.
             </p>
           </CardContent>
         </Card>

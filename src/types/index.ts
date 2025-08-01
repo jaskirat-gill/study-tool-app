@@ -64,3 +64,12 @@ export interface GeminiResponse {
   examQuestions?: ExamQuestion[];
   error?: string;
 }
+
+export interface StudyNotes {
+  id: string;
+  title: string;
+  content: string;
+  created: Date;
+  lastModified: Date;
+  sourceContent?: string; // The original content that was used to generate the notes
+}
