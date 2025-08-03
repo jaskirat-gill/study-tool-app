@@ -11,11 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   BookOpen,
   Upload,
-  Search,
   Calendar,
   FileText,
   Trash2,
@@ -25,6 +23,9 @@ import { getStudySets, deleteStudySet } from "@/lib/storage";
 import { StudySet } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { NoSearchResults } from "@/components/NoSearchResults";
 import { formatDate } from "@/lib/utils";
 import { useCallback } from "react";
 
@@ -82,24 +83,16 @@ export default function StudySetsPage() {
   if (studySets.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center space-y-6 py-12">
-          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto">
-            <BookOpen className="h-12 w-12 text-muted-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">No Study Sets Yet</h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Upload your first document to create AI-powered flashcards and
-              start studying!
-            </p>
-          </div>
-          <Button asChild size="lg">
-            <Link href="/upload">
-              <Upload className="mr-2 h-4 w-4" />
-              Create Your First Study Set
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No Study Sets Yet"
+          description="Upload your first document to create AI-powered flashcards and start studying!"
+          actionButton={{
+            label: "Create Your First Study Set",
+            href: "/upload",
+            icon: Upload,
+          }}
+        />
       </div>
     );
   }
@@ -107,32 +100,19 @@ export default function StudySetsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold">Study Sets</h1>
-            <p className="text-muted-foreground">
-              Manage your AI-generated flashcard collections
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/upload">
-              <Upload className="mr-2 h-4 w-4" />
-              Create New Set
-            </Link>
-          </Button>
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search study sets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <PageHeader
+          title="Study Sets"
+          subtitle="Manage your AI-generated flashcard collections"
+          actionButton={{
+            label: "Create New Set",
+            href: "/upload",
+            icon: Upload,
+          }}
+          showSearch
+          searchPlaceholder="Search study sets..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
         {/* Study Sets Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,15 +220,7 @@ export default function StudySetsPage() {
 
         {/* No results */}
         {filteredSets.length === 0 && searchQuery && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No study sets found</h2>
-            <p className="text-muted-foreground">
-              Try adjusting your search terms or create a new study set.
-            </p>
-          </div>
+          <NoSearchResults searchQuery={searchQuery} itemType="study sets" />
         )}
       </div>
     </div>

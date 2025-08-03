@@ -26,11 +26,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
 
-  const { user } = context;
-  if (!user) {
-    throw new Error('User is not signed in');
-  }
-
   return context;
 };
 

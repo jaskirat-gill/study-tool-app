@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { AlertCircle, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { FormField } from '@/components/ui/form-field'
+import { Message } from '@/components/ui/message'
+import { AuthFormLayout } from '@/components/AuthFormLayout'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -73,159 +72,87 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-md">
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Create account</h1>
-          <p className="text-muted-foreground">
-            Sign up to start creating your study sets
-          </p>
-        </div>
+    <AuthFormLayout
+      title="Create account"
+      subtitle="Sign up to start creating your study sets"
+      cardTitle="Sign Up"
+      cardDescription="Create a new account to get started"
+      linkText="Already have an account?"
+      linkHref="/auth/login"
+      linkLabel="Sign in"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FormField
+          id="name"
+          label="Full Name"
+          value={name}
+          onChange={setName}
+          placeholder="Enter your full name"
+          required
+          autoComplete="name"
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
-            <CardDescription>
-              Create a new account to get started
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
-                  required
-                  autoComplete="name"
-                />
-              </div>
+        <FormField
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="Enter your email"
+          required
+          autoComplete="email"
+        />
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                  autoComplete="email"
-                />
-              </div>
+        <FormField
+          id="password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          placeholder="Enter your password"
+          required
+          autoComplete="new-password"
+          showPasswordToggle
+          showPassword={showPassword}
+          onTogglePassword={() => setShowPassword(!showPassword)}
+          helperText="Must be at least 6 characters long"
+        />
 
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Must be at least 6 characters long
-                </p>
-              </div>
+        <FormField
+          id="confirmPassword"
+          label="Confirm Password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          placeholder="Confirm your password"
+          required
+          autoComplete="new-password"
+          showPasswordToggle
+          showPassword={showConfirmPassword}
+          onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+        />
 
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    required
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+        {error && <Message type="error" message={error} />}
 
-              {/* Error Message */}
-              {error && (
-                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">{error}</span>
-                </div>
-              )}
-
-              {/* Success Message */}
-              {success && (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-lg">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm">{success}</span>
-                  </div>
-                  <div className="text-center">
-                    <Link href="/auth/login">
-                      <Button variant="outline" size="sm">
-                        Go to Sign In
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating account...' : 'Create Account'}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Link href="/auth/login" className="text-primary hover:underline">
-                  Sign in
-                </Link>
-              </p>
+        {success && (
+          <div className="space-y-3">
+            <Message type="success" message={success} />
+            <div className="text-center">
+              <Link href="/auth/login">
+                <Button variant="outline" size="sm">
+                  Go to Sign In
+                </Button>
+              </Link>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        )}
+
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isLoading}
+        >
+          {isLoading ? 'Creating account...' : 'Create Account'}
+        </Button>
+      </form>
+    </AuthFormLayout>
   )
 }

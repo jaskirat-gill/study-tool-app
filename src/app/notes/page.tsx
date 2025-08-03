@@ -11,19 +11,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
-  Sparkles,
-  Search,
   Calendar,
   FileText,
   Trash2,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { getStudyNotes, deleteStudyNote } from "@/lib/storage";
 import { StudyNotes } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { NoSearchResults } from "@/components/NoSearchResults";
 import { formatDate } from "@/lib/utils";
 
 export default function NotesListPage() {
@@ -86,41 +87,26 @@ export default function NotesListPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div>
-              <h1 className="text-3xl font-bold">Study Notes</h1>
-              <p className="text-muted-foreground">
-                AI-generated comprehensive review notes
-              </p>
-            </div>
-            <Button asChild>
-              <Link href="/notes/generate">
-                <Plus className="mr-2 h-4 w-4" />
-                Generate Notes
-              </Link>
-            </Button>
-          </div>
+          <PageHeader
+            title="Study Notes"
+            subtitle="AI-generated comprehensive review notes"
+            actionButton={{
+              label: "Generate Notes",
+              href: "/notes/generate",
+              icon: Plus,
+            }}
+          />
 
-          {/* Empty State */}
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No Study Notes Yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Create your first set of AI-generated study notes from clipboard
-                content.
-              </p>
-              <Button asChild>
-                <Link href="/notes/generate">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Your First Notes
-                </Link>
-              </Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No Study Notes Yet"
+            description="Create your first set of AI-generated study notes from clipboard content."
+            actionButton={{
+              label: "Generate Your First Notes",
+              href: "/notes/generate",
+              icon: Sparkles,
+            }}
+          />
         </div>
       </div>
     );
@@ -129,32 +115,19 @@ export default function NotesListPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold">Study Notes</h1>
-            <p className="text-muted-foreground">
-              Manage your AI-generated study notes
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/notes/generate">
-              <Plus className="mr-2 h-4 w-4" />
-              Generate New Notes
-            </Link>
-          </Button>
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <PageHeader
+          title="Study Notes"
+          subtitle="Manage your AI-generated study notes"
+          actionButton={{
+            label: "Generate New Notes",
+            href: "/notes/generate",
+            icon: Plus,
+          }}
+          showSearch
+          searchPlaceholder="Search notes..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -255,16 +228,7 @@ export default function NotesListPage() {
 
         {/* No Results */}
         {searchQuery && filteredNotes.length === 0 && (
-          <div className="text-center py-8">
-            <div className="max-w-md mx-auto">
-              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Notes Found</h3>
-              <p className="text-muted-foreground">
-                No notes match your search query &quot;{searchQuery}&quot;. Try
-                a different search term.
-              </p>
-            </div>
-          </div>
+          <NoSearchResults searchQuery={searchQuery} itemType="notes" />
         )}
       </div>
     </div>
