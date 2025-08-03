@@ -73,3 +73,15 @@ export interface StudyNotes {
   lastModified: Date;
   sourceContent?: string; // The original content that was used to generate the notes
 }
+
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+  email_confirmed_at?: string;
+}
+
+export interface AuthUser {
+  user: User | null;
+  loading: boolean;
+}

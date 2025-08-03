@@ -1,40 +1,93 @@
+'use client'
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, BookOpen, GraduationCap, Zap, FileText } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center space-y-6 py-12">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded w-1/2 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
       <div className="text-center space-y-6 py-12">
-        <h1 className="text-4xl font-bold tracking-tight">
-          AI-Powered Study Tool
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Upload your documents and let AI generate flashcards and practice exams 
-          to help you study more effectively.
-        </p>
+        {user ? (
+          <>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Welcome back, {user.user_metadata?.full_name || user.user_metadata?.name || 'there'}!
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Ready to continue your learning journey? Upload a new document or review your existing study materials.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-4xl font-bold tracking-tight">
+              AI-Powered Study Tool
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Upload your documents and let AI generate flashcards and practice exams 
+              to help you study more effectively.
+            </p>
+          </>
+        )}
         <div className="flex justify-center space-x-4 flex-wrap gap-2">
-          <Button asChild size="lg">
-            <Link href="/upload">
-              <Upload className="mr-2 h-4 w-4" />
-              Get Started
-            </Link>
-          </Button>
-          <Button variant="outline" asChild size="lg">
-            <Link href="/study-sets">
-              <BookOpen className="mr-2 h-4 w-4" />
-              Browse Study Sets
-            </Link>
-          </Button>
-          <Button variant="outline" asChild size="lg">
-            <Link href="/notes/generate">
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Notes
-            </Link>
-          </Button>
+          {user ? (
+            <>
+              <Button asChild size="lg">
+                <Link href="/upload">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Document
+                </Link>
+              </Button>
+              <Button variant="outline" asChild size="lg">
+                <Link href="/study-sets">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  My Study Sets
+                </Link>
+              </Button>
+              <Button variant="outline" asChild size="lg">
+                <Link href="/notes/generate">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate Notes
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button asChild size="lg">
+                <Link href="/auth/signup">
+                  Get Started Free
+                </Link>
+              </Button>
+              <Button variant="outline" asChild size="lg">
+                <Link href="/auth/login">
+                  Sign In
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
+        {!user && (
+          <p className="text-sm text-muted-foreground">
+            Sign up now to start creating your personalized study materials
+          </p>
+        )}
       </div>
 
       {/* Features Section */}
