@@ -2,8 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { User } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
-import { runDataMigration } from '@/lib/storage'
+import { supabase } from '@/lib/supabase/client'
 
 interface AuthContextType {
   user: User | null
@@ -22,12 +21,18 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
-}
+
+  const { user } = context;
+  if (!user) {
+    throw new Error('User is not signed in');
+  }
+
+  return context;
+};
 
 interface AuthProviderProps {
   children: ReactNode
@@ -37,7 +42,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const previousUserRef = useRef<User | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     // Get initial session
@@ -52,17 +56,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        const previousUser = previousUserRef.current
         const newUser = session?.user ?? null
         
         setUser(newUser)
         setLoading(false)
-        
-        // Run migration when user signs in for the first time in this session
-        if (newUser && !previousUser && event === 'SIGNED_IN') {
-          // Run migration in background without blocking UI
-          runDataMigration().catch(console.error)
-        }
         
         // Update the ref for next comparison
         previousUserRef.current = newUser
@@ -70,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -95,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         email: string; 
         password: string; 
         options?: { 
-          data: { full_name: string; name: string };
+          data: { full_name: string };
         } 
       } = {
         email,
@@ -106,7 +103,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         signUpData.options = {
           data: { 
             full_name: name, // This will show in Supabase dashboard display name
-            name: name       // Keep this for backward compatibility
           }
         }
       }

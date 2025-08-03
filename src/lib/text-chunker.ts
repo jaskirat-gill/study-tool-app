@@ -1,16 +1,6 @@
 // Utility functions for handling large text content and token limits
 
-export interface TextChunk {
-  content: string;
-  index: number;
-  estimatedTokens: number;
-}
-
-export interface ChunkingOptions {
-  maxTokensPerChunk: number;
-  overlapSize: number; // Number of words to overlap between chunks
-  preserveSentences: boolean; // Try to break at sentence boundaries
-}
+import { ChunkingOptions, TextChunk } from "@/types";
 
 const DEFAULT_CHUNKING_OPTIONS: ChunkingOptions = {
   maxTokensPerChunk: 15000, // Conservative limit for Gemini

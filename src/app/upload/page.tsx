@@ -1,91 +1,115 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
-import { extractTextFromFile, validateFileSize, validateFileType } from '@/lib/document-processor';
-import { generateFlashcards } from '@/lib/gemini-client';
-import { saveStudySet, generateId } from '@/lib/storage';
-import { StudySet } from '@/types';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  extractTextFromFile,
+  validateFileSize,
+  validateFileType,
+} from "@/lib/document-processor";
+import { generateFlashcards } from "@/lib/gemini-client";
+import { saveStudySet } from "@/lib/storage";
+import { StudySet } from "@/types";
+import { generateId } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
 
 export default function UploadPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [flashcardCount, setFlashcardCount] = useState([15]); // Default to 15 flashcards
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const { user } = useAuth();
+
+  if (!user) {
+    return <NotLoggedInPrompt />;
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     // Validate file type
     if (!validateFileType(selectedFile)) {
-      setError('Please select a valid file type (PDF, DOCX, or TXT)');
+      setError("Please select a valid file type (PDF, DOCX, or TXT)");
       return;
     }
 
     // Validate file size (10MB limit)
     if (!validateFileSize(selectedFile, 10)) {
-      setError('File size must be less than 10MB');
+      setError("File size must be less than 10MB");
       return;
     }
 
     setFile(selectedFile);
-    
+
     // Auto-generate title from filename if empty
     if (!title) {
-      const fileName = selectedFile.name.replace(/\.[^/.]+$/, '');
+      const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
       setTitle(fileName);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!file || !title.trim()) {
-      setError('Please select a file and provide a title');
+      setError("Please select a file and provide a title");
       return;
     }
 
     setIsProcessing(true);
     setProgress(0);
-    setError('');
+    setError("");
 
     try {
       // Step 1: Extract text from file
       setProgress(25);
       const extractResult = await extractTextFromFile(file);
-      
+
       if (!extractResult.success) {
         throw new Error(extractResult.error);
       }
 
       // Step 2: Generate flashcards
       setProgress(50);
-      const flashcardsResult = await generateFlashcards(extractResult.content!, flashcardCount[0]);
-      
+      const flashcardsResult = await generateFlashcards(
+        extractResult.content!,
+        flashcardCount[0]
+      );
+
       if (flashcardsResult.error) {
         throw new Error(flashcardsResult.error);
       }
 
-      if (!flashcardsResult.flashcards || flashcardsResult.flashcards.length === 0) {
-        throw new Error('No flashcards could be generated from this content');
+      if (
+        !flashcardsResult.flashcards ||
+        flashcardsResult.flashcards.length === 0
+      ) {
+        throw new Error("No flashcards could be generated from this content");
       }
 
       // Step 3: Create and save study set
@@ -103,19 +127,21 @@ export default function UploadPage() {
           size: file.size,
         },
       };
-      console.log('Generated study set:', studySet);
-      saveStudySet(studySet);
+      saveStudySet(studySet, user);
       setProgress(100);
-      
-      setSuccess(`Successfully created study set with ${flashcardsResult.flashcards.length} flashcards!`);
-      
+
+      setSuccess(
+        `Successfully created study set with ${flashcardsResult.flashcards.length} flashcards!`
+      );
+
       // Redirect to the new study set after a short delay
       setTimeout(() => {
         router.push(`/study-sets/${studySet.id}`);
       }, 2000);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred"
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -230,7 +256,8 @@ export default function UploadPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  More flashcards will take longer to generate but provide more comprehensive coverage.
+                  More flashcards will take longer to generate but provide more
+                  comprehensive coverage.
                 </p>
               </div>
 
@@ -239,7 +266,9 @@ export default function UploadPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Processing...</span>
-                    <span className="text-sm text-muted-foreground">{progress}%</span>
+                    <span className="text-sm text-muted-foreground">
+                      {progress}%
+                    </span>
                   </div>
                   <Progress value={progress} />
                 </div>
@@ -262,12 +291,12 @@ export default function UploadPage() {
               )}
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={!file || !title.trim() || isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Generate Flashcards'}
+                {isProcessing ? "Processing..." : "Generate Flashcards"}
               </Button>
             </form>
           </CardContent>
@@ -285,7 +314,9 @@ export default function UploadPage() {
                   <FileText className="h-6 w-6" />
                 </div>
                 <p className="font-medium">PDF</p>
-                <p className="text-xs text-muted-foreground">Portable Document Format</p>
+                <p className="text-xs text-muted-foreground">
+                  Portable Document Format
+                </p>
               </div>
               <div className="space-y-2">
                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mx-auto">
@@ -299,7 +330,9 @@ export default function UploadPage() {
                   <FileText className="h-6 w-6" />
                 </div>
                 <p className="font-medium">TXT</p>
-                <p className="text-xs text-muted-foreground">Plain Text Files</p>
+                <p className="text-xs text-muted-foreground">
+                  Plain Text Files
+                </p>
               </div>
             </div>
           </CardContent>

@@ -1,37 +1,62 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { 
-  BookOpen, 
-  Upload, 
-  Search, 
-  Calendar, 
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  BookOpen,
+  Upload,
+  Search,
+  Calendar,
   FileText,
   Trash2,
-  Play
-} from 'lucide-react';
-import { getStudySets, deleteStudySet } from '@/lib/storage';
-import { StudySet } from '@/types';
+  Play,
+} from "lucide-react";
+import { getStudySets, deleteStudySet } from "@/lib/storage";
+import { StudySet } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
+import { formatDate } from "@/lib/utils";
+import { useCallback } from "react";
 
 export default function StudySetsPage() {
   const [studySets, setStudySets] = useState<StudySet[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filteredSets, setFilteredSets] = useState<StudySet[]>([]);
+  const { user } = useAuth();
+
+  const loadStudySets = useCallback(async () => {
+    if (!user) {
+      return <NotLoggedInPrompt />;
+    }
+    try {
+      const sets = await getStudySets(user);
+      setStudySets(sets);
+    } catch (error) {
+      console.error("Error loading study sets:", error);
+      setStudySets([]);
+    }
+  }, [user]);
 
   useEffect(() => {
     loadStudySets();
-  }, []);
+  }, [loadStudySets]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = studySets.filter(set =>
-        set.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        set.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = studySets.filter(
+        (set) =>
+          set.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          set.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredSets(filtered);
     } else {
@@ -39,33 +64,19 @@ export default function StudySetsPage() {
     }
   }, [searchQuery, studySets]);
 
-  const loadStudySets = async () => {
-    try {
-      const sets = await getStudySets();
-      setStudySets(sets);
-    } catch (error) {
-      console.error('Error loading study sets:', error);
-      setStudySets([]);
-    }
-  };
+  if (!user) {
+    return <NotLoggedInPrompt />;
+  }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this study set?')) {
+    if (confirm("Are you sure you want to delete this study set?")) {
       try {
-        await deleteStudySet(id);
+        await deleteStudySet(id, user);
         loadStudySets();
       } catch (error) {
-        console.error('Error deleting study set:', error);
+        console.error("Error deleting study set:", error);
       }
     }
-  };
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   if (studySets.length === 0) {
@@ -78,7 +89,8 @@ export default function StudySetsPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold">No Study Sets Yet</h1>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Upload your first document to create AI-powered flashcards and start studying!
+              Upload your first document to create AI-powered flashcards and
+              start studying!
             </p>
           </div>
           <Button asChild size="lg">
@@ -125,11 +137,16 @@ export default function StudySetsPage() {
         {/* Study Sets Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSets.map((studySet) => (
-            <Card key={studySet.id} className="hover:shadow-lg transition-shadow">
+            <Card
+              key={studySet.id}
+              className="hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1 flex-1">
-                    <CardTitle className="line-clamp-2">{studySet.title}</CardTitle>
+                    <CardTitle className="line-clamp-2">
+                      {studySet.title}
+                    </CardTitle>
                     {studySet.description && (
                       <CardDescription className="line-clamp-2">
                         {studySet.description}
@@ -172,18 +189,21 @@ export default function StudySetsPage() {
 
                   {/* Difficulty Distribution */}
                   <div className="flex space-x-1">
-                    {['easy', 'medium', 'hard'].map((difficulty) => {
+                    {["easy", "medium", "hard"].map((difficulty) => {
                       const count = studySet.flashcards.filter(
-                        card => card.difficulty === difficulty
+                        (card) => card.difficulty === difficulty
                       ).length;
                       if (count === 0) return null;
-                      
+
                       return (
                         <Badge
                           key={difficulty}
                           variant={
-                            difficulty === 'easy' ? 'secondary' :
-                            difficulty === 'medium' ? 'default' : 'destructive'
+                            difficulty === "easy"
+                              ? "secondary"
+                              : difficulty === "medium"
+                              ? "default"
+                              : "destructive"
                           }
                           className="text-xs"
                         >
@@ -201,7 +221,12 @@ export default function StudySetsPage() {
                         Study
                       </Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="flex-1">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
                       <Link href={`/study-sets/${studySet.id}/practice`}>
                         Practice Exam
                       </Link>

@@ -14,11 +14,13 @@ import { getStudySet } from '@/lib/storage';
 import { generateExamQuestions } from '@/lib/gemini-client';
 import { StudySet, ExamQuestion } from '@/types';
 import { ArrowLeft, Clock, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PracticeExamPage() {
   const params = useParams();
   const router = useRouter();
   const studySetId = params.id as string;
+  const { user } = useAuth();
 
   const [studySet, setStudySet] = useState<StudySet | null>(null);
   const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
@@ -37,9 +39,13 @@ export default function PracticeExamPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!studySetId || !user) {
+      router.push('/study-sets');
+      return;
+    }
     const loadStudySet = async () => {
       try {
-        const set = await getStudySet(studySetId);
+        const set = await getStudySet(studySetId, user);
         if (!set) {
           router.push('/study-sets');
           return;
@@ -52,7 +58,7 @@ export default function PracticeExamPage() {
     };
     
     loadStudySet();
-  }, [studySetId, router]);
+  }, [studySetId, router, user]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

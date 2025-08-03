@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { estimateTokenCount, getOptimalChunkingStrategy, chunkText, TextChunk } from '@/lib/text-chunker';
+import { estimateTokenCount, getOptimalChunkingStrategy, chunkText } from '@/lib/text-chunker';
+import { TextChunk } from '@/types';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
