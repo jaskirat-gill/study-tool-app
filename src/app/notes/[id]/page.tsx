@@ -25,14 +25,17 @@ export default function StudyNotePage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (params.id) {
-      const note = getStudyNote(params.id as string);
-      if (note) {
-        setStudyNote(note);
-      } else {
-        router.push('/notes');
-      }
+    const loadNote = async () => {
+        if (params.id) {
+            const note = await getStudyNote(params.id as string);
+            if (note) {
+                setStudyNote(note);
+            } else {
+                router.push('/notes');
+            }
+        }
     }
+    loadNote();
   }, [params.id, router]);
 
   const handleDelete = async () => {
@@ -43,7 +46,7 @@ export default function StudyNotePage() {
 
     setIsDeleting(true);
     try {
-      deleteStudyNote(studyNote.id);
+      await deleteStudyNote(studyNote.id);
       router.push('/notes');
     } catch (error) {
       console.error('Error deleting notes:', error);

@@ -103,7 +103,7 @@ export default function UploadPage() {
           size: file.size,
         },
       };
-
+      console.log('Generated study set:', studySet);
       saveStudySet(studySet);
       setProgress(100);
       

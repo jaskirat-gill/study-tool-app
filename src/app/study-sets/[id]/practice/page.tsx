@@ -37,12 +37,21 @@ export default function PracticeExamPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const set = getStudySet(studySetId);
-    if (!set) {
-      router.push('/study-sets');
-      return;
-    }
-    setStudySet(set);
+    const loadStudySet = async () => {
+      try {
+        const set = await getStudySet(studySetId);
+        if (!set) {
+          router.push('/study-sets');
+          return;
+        }
+        setStudySet(set);
+      } catch (error) {
+        console.error('Error loading study set:', error);
+        router.push('/study-sets');
+      }
+    };
+    
+    loadStudySet();
   }, [studySetId, router]);
 
   useEffect(() => {

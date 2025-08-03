@@ -39,15 +39,24 @@ export default function StudySetsPage() {
     }
   }, [searchQuery, studySets]);
 
-  const loadStudySets = () => {
-    const sets = getStudySets();
-    setStudySets(sets);
+  const loadStudySets = async () => {
+    try {
+      const sets = await getStudySets();
+      setStudySets(sets);
+    } catch (error) {
+      console.error('Error loading study sets:', error);
+      setStudySets([]);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this study set?')) {
-      deleteStudySet(id);
-      loadStudySets();
+      try {
+        await deleteStudySet(id);
+        loadStudySets();
+      } catch (error) {
+        console.error('Error deleting study set:', error);
+      }
     }
   };
 

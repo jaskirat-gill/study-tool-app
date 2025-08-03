@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { runDataMigration } from '@/lib/storage'
 
 interface AuthContextType {
   user: User | null
@@ -35,6 +36,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const previousUserRef = useRef<User | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -50,8 +52,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
+        const previousUser = previousUserRef.current
+        const newUser = session?.user ?? null
+        
+        setUser(newUser)
         setLoading(false)
+        
+        // Run migration when user signs in for the first time in this session
+        if (newUser && !previousUser && event === 'SIGNED_IN') {
+          // Run migration in background without blocking UI
+          runDataMigration().catch(console.error)
+        }
+        
+        // Update the ref for next comparison
+        previousUserRef.current = newUser
       }
     )
 

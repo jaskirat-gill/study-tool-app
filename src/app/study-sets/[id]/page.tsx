@@ -35,15 +35,24 @@ export default function StudySetPage() {
   const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
-    if (params.id) {
-      const set = getStudySet(params.id as string);
-      if (set) {
-        setStudySet(set);
-        setSessionStats(prev => ({ ...prev, total: set.flashcards.length }));
-      } else {
-        router.push('/study-sets');
+    const loadStudySet = async () => {
+      if (params.id) {
+        try {
+          const set = await getStudySet(params.id as string);
+          if (set) {
+            setStudySet(set);
+            setSessionStats(prev => ({ ...prev, total: set.flashcards.length }));
+          } else {
+            router.push('/study-sets');
+          }
+        } catch (error) {
+          console.error('Error loading study set:', error);
+          router.push('/study-sets');
+        }
       }
-    }
+    };
+    
+    loadStudySet();
   }, [params.id, router]);
 
   const currentCard = studySet?.flashcards[currentCardIndex];
@@ -76,7 +85,11 @@ export default function StudySetPage() {
     };
 
     setStudySet(updatedStudySet);
-    saveStudySet(updatedStudySet);
+    
+    // Save study set asynchronously
+    saveStudySet(updatedStudySet).catch(error => {
+      console.error('Error saving study set:', error);
+    });
 
     // Update session statistics
     setSessionStats(prev => ({

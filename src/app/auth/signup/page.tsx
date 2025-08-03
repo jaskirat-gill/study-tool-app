@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -24,10 +24,11 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState('')
 
   // Redirect if already logged in
-  if (user) {
-    router.push('/')
-    return null
-  }
+  useEffect(() => {
+    if (user) {
+      router.push('/')
+    }
+  }, [user, router])
 
   const validatePassword = (pwd: string) => {
     if (pwd.length < 6) {

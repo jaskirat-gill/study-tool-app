@@ -134,7 +134,7 @@ export default function GenerateNotesPage() {
         sourceContent: contentToProcess,
       };
 
-      saveStudyNotes(studyNotes);
+      await saveStudyNotes(studyNotes);
 
       setProgress(100);
       setSuccess('Notes generated successfully! Redirecting...');

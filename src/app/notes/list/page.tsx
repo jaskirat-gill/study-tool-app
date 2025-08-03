@@ -40,8 +40,8 @@ export default function NotesListPage() {
     }
   }, [notes, searchQuery]);
 
-  const loadNotes = () => {
-    const savedNotes = getStudyNotes();
+  const loadNotes = async () => {
+    const savedNotes = await getStudyNotes();
     // Sort by creation date (newest first)
     savedNotes.sort((a, b) => b.created.getTime() - a.created.getTime());
     setNotes(savedNotes);
@@ -52,7 +52,7 @@ export default function NotesListPage() {
     if (!confirmed) return;
 
     try {
-      deleteStudyNote(id);
+      await deleteStudyNote(id);
       loadNotes(); // Reload the list
     } catch (error) {
       console.error('Error deleting notes:', error);
