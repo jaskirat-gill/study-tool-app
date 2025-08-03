@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { getStudySet, saveStudySet } from '@/lib/storage';
 import { StudySet } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import NotLoggedInPrompt from '@/components/NotLoggedInPrompt';
 
 export default function StudySetPage() {
   const params = useParams();
@@ -33,12 +35,15 @@ export default function StudySetPage() {
   });
   const [completedCards, setCompletedCards] = useState<Set<string>>(new Set());
   const [showResults, setShowResults] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
+    if (!user) return;
+
     const loadStudySet = async () => {
       if (params.id) {
         try {
-          const set = await getStudySet(params.id as string);
+          const set = await getStudySet(params.id as string, user);
           if (set) {
             setStudySet(set);
             setSessionStats(prev => ({ ...prev, total: set.flashcards.length }));
@@ -53,8 +58,11 @@ export default function StudySetPage() {
     };
     
     loadStudySet();
-  }, [params.id, router]);
+  }, [params.id, router, user]);
 
+  if (!user) {
+    return <NotLoggedInPrompt/>
+  }
   const currentCard = studySet?.flashcards[currentCardIndex];
 
   const handleCardFlip = () => {
@@ -87,7 +95,7 @@ export default function StudySetPage() {
     setStudySet(updatedStudySet);
     
     // Save study set asynchronously
-    saveStudySet(updatedStudySet).catch(error => {
+    saveStudySet(updatedStudySet, user).catch(error => {
       console.error('Error saving study set:', error);
     });
 
