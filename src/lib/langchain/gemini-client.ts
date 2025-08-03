@@ -8,7 +8,15 @@ import { AIMessage } from '@langchain/core/messages';
 
 // Template for flashcard generation
 const flashcardTemplate = ChatPromptTemplate.fromTemplate(`
-You are an expert educational content creator. You specialize in creating educational materials. Generate exactly {count} flashcards from the following content. Each flashcard should have a clear question (front) and answer (back). Focus on key concepts, definitions, and important facts. Vary the difficulty levels between "easy", "medium", and "hard".
+You are an expert educational content creator specialized in creating high-quality flashcards. Generate exactly {count} flashcards from the following content.
+
+Flashcard Creation Guidelines:
+- Focus on core concepts, definitions, and important facts
+- Ensure questions are specific and unambiguous
+- Create concise answers that fully address the question
+- Distribute difficulty levels ("easy", "medium", "hard") evenly
+- Write questions that test understanding rather than simple recall
+- Avoid overly complex or compound questions
 
 {chunk_info}
 
@@ -20,7 +28,16 @@ Content:
 
 // Template for exam question generation
 const examTemplate = ChatPromptTemplate.fromTemplate(`
-You are an expert educational content creator. Generate exactly {question_specs} from the following content. Include an explanation for each correct answer. Vary the difficulty levels between "easy", "medium", and "hard".
+You are an expert educational assessment designer specializing in creating challenging but fair exam questions. Generate exactly {question_specs} from the following content.
+
+Question Design Guidelines:
+- Create clear, unambiguous questions that test understanding
+- For multiple-choice: ensure exactly 4 options with one clearly correct answer
+- For fill-in-blank: ensure the blank targets a key concept from the content
+- For short answer: define a clear scope for acceptable answers
+- Include detailed explanations that reinforce learning
+- Distribute difficulty levels ("easy", "medium", "hard") evenly
+- Ensure questions cover different aspects of the content
 
 {chunk_info}
 {word_bank_instruction}
@@ -33,16 +50,17 @@ Content:
 
 // Template for study notes generation
 const notesTemplate = ChatPromptTemplate.fromTemplate(`
-You are an expert educational content summarizer. Create comprehensive review notes from the following content{chunk_text}. Focus on key concepts, important facts, definitions, and relationships between ideas.
+You are an expert educational content summarizer. Create comprehensive yet concise review notes from the following content{chunk_text}. 
 
-Structure your notes with:
-- Clear headings for different topics/concepts
-- Bullet points for key facts and details
-- Important definitions highlighted
-- Relationships between concepts explained
-- Examples where relevant
-
-Make the notes comprehensive yet concise, suitable for review and study.
+Notes Creation Guidelines:
+- Organize content with clear hierarchical structure (headings, subheadings)
+- Use bullet points for key facts, nested when appropriate
+- Bold important terms and definitions
+- Include visual cues like numbered lists where appropriate
+- Create connections between related concepts
+- Maintain academic tone and precision
+- Summarize complex ideas without oversimplification
+- Include concise examples when they clarify difficult concepts
 
 Content:
 {content}
@@ -75,19 +93,20 @@ function extractTextFromAIMessage(message: AIMessage): string {
 
 export async function generateFlashcards(content: string, count: number = 10): Promise<GeminiResponse> {
   try {
-    // Check if content needs chunking
-    const needsChunking = content.length > 10000;
+    // Set thresholds for chunking
+    const chunkingThreshold = 8000; // Lower threshold for more manageable chunks
+    const needsChunking = content.length > chunkingThreshold;
     let allFlashcards: z.infer<typeof flashcardsParser.schema>['flashcards'] = [];
 
     if (needsChunking) {
-      // Split into chunks
-      const documents = await splitTextIntoDocuments(content);
+      // Split into chunks with enhanced metadata
+      const documents = await splitTextIntoDocuments(content, { source: 'user_content', timestamp: new Date().toISOString() });
       const chunks = documentsToTextChunks(documents);
       
-      // Distribute flashcard count across chunks
+      // Distribute flashcard count across chunks proportionally to content size
       const cardCounts = distributeItemsAcrossChunks(documents, count);
       
-      // Process each chunk
+      // Process each chunk with appropriate context
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         const chunkCardCount = cardCounts[i];
@@ -113,9 +132,10 @@ export async function generateFlashcards(content: string, count: number = 10): P
           allFlashcards.push(...parsedOutput.flashcards);
         }
         
-        // Add delay between API calls
+        // Add adaptive delay between API calls based on content size
         if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const delayMs = Math.min(1500, Math.max(500, chunk.estimatedTokens / 10));
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
     } else {
