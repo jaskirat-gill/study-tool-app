@@ -40,20 +40,20 @@ export default function PracticeExamPage() {
 
   useEffect(() => {
     if (!studySetId || !user) {
-      router.push('/study-sets');
+      router.push('/dashboard/study-sets');
       return;
     }
     const loadStudySet = async () => {
       try {
         const set = await getStudySet(studySetId, user);
         if (!set) {
-          router.push('/study-sets');
+          router.push('/dashboard/study-sets');
           return;
         }
         setStudySet(set);
       } catch (error) {
         console.error('Error loading study set:', error);
-        router.push('/study-sets');
+        router.push('/dashboard/study-sets');
       }
     };
     

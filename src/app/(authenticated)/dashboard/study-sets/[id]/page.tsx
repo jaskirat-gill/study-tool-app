@@ -49,11 +49,11 @@ export default function StudySetPage() {
             setStudySet(set);
             setSessionStats(prev => ({ ...prev, total: set.flashcards.length }));
           } else {
-            router.push('dashboard/study-sets');
+            router.push('/dashboard/study-sets');
           }
         } catch (error) {
           console.error('Error loading study set:', error);
-          router.push('dashboard/study-sets');
+          router.push('/dashboard/study-sets');
         }
       }
     };

@@ -21,8 +21,8 @@ export async function saveStudySet(studySet: StudySet, user: User): Promise<void
     const { error: studySetError } = await supabase
       .from('study_sets')
       .upsert(studySetData)
-
     if (studySetError) {
+      console.error('Error saving study set:', studySetError);
       throw studySetError
     }
 
@@ -33,11 +33,13 @@ export async function saveStudySet(studySet: StudySet, user: User): Promise<void
       .eq('study_set_id', studySet.id)
 
     if (deleteError) {
+      console.error('Error deleting existing flashcards:', deleteError);
       throw deleteError
     }
-
+    console.log('Study set saved successfully:', studySet.flashcards);
     // Insert new flashcards
     if (studySet.flashcards.length > 0) {
+      console.log('Inserting new flashcards:', studySet.flashcards);
       const flashcardsData = studySet.flashcards.map(card => ({
         id: card.id,
         study_set_id: studySet.id,
@@ -49,7 +51,7 @@ export async function saveStudySet(studySet: StudySet, user: User): Promise<void
         review_count: card.reviewCount,
         correct_count: card.correctCount,
       }))
-
+      console.log('Inserting flashcards:', flashcardsData);
       const { error: flashcardsError } = await supabase
         .from('flashcards')
         .insert(flashcardsData)
@@ -57,6 +59,7 @@ export async function saveStudySet(studySet: StudySet, user: User): Promise<void
       if (flashcardsError) {
         throw flashcardsError
       }
+      console.log("flashcard error", flashcardsError);
     }
   } catch (error) {
     console.error('Error saving study set:', error)

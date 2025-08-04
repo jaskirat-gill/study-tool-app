@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log(`Generated ${result.flashcards?.length || 0} flashcards using LangChain`);
+    console.log('Generated flashcards:', result.flashcards);
     return NextResponse.json({ flashcards: result.flashcards });
 
   } catch (error) {

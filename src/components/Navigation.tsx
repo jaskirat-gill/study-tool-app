@@ -68,19 +68,19 @@ export function Navigation() {
                   Home
                 </Link>
                 <Link
-                  href="/upload"
+                  href="/dashboard/upload"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Upload
                 </Link>
                 <Link
-                  href="/study-sets"
+                  href="/dashboard/study-sets"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Study Sets
                 </Link>
                 <Link
-                  href="/notes"
+                  href="/dashboard/notes"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Notes
