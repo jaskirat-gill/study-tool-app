@@ -48,7 +48,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // File Upload State
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   
   // Clipboard State
@@ -95,7 +95,7 @@ export default function UploadPage() {
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      throw new Error('Please select a valid file type (PDF, DOCX, or TXT)');
+      throw new Error('Please select valid file types (PDF, DOCX, or TXT)');
     }
     
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -104,27 +104,30 @@ export default function UploadPage() {
     }
   };
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
+  const handleFileSelect = useCallback((selectedFiles: File[]) => {
     try {
-      validateFile(selectedFile);
-      setFile(selectedFile);
+      // Validate each file
+      selectedFiles.forEach(file => validateFile(file));
       
-      // Auto-generate title from filename if empty
-      if (!title) {
-        const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
-        setTitle(fileName);
+      // Add new files to existing files array
+      setFiles(prev => [...prev, ...selectedFiles]);
+      
+      // Auto-generate title from first filename if empty
+      if (!title && selectedFiles.length > 0) {
+        const fileName = selectedFiles[0].name.replace(/\.[^/.]+$/, "");
+        setTitle(fileName + (selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} more` : ""));
       }
       
-      toast.success('File selected successfully!');
+      toast.success(`${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected successfully!`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'File validation failed');
     }
   }, [title]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      handleFileSelect(selectedFile);
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      handleFileSelect(Array.from(selectedFiles));
     }
   };
 
@@ -132,9 +135,9 @@ export default function UploadPage() {
     e.preventDefault();
     setIsDragOver(false);
     
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      handleFileSelect(droppedFile);
+    if (e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      handleFileSelect(droppedFiles);
     }
   }, [handleFileSelect]);
 
@@ -167,13 +170,20 @@ export default function UploadPage() {
     }
   };
 
-  const removeFile = () => {
-    setFile(null);
-    if (title && file) {
-      // Only reset title if it was auto-generated from the file name
-      const fileName = file.name.replace(/\.[^/.]+$/, "");
-      if (title === fileName) {
-        setTitle("");
+  const removeFile = (index?: number) => {
+    if (index !== undefined) {
+      // Remove specific file
+      setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    } else {
+      // Remove all files
+      setFiles([]);
+      // Only reset title if it was auto-generated
+      if (title && files.length > 0) {
+        const firstFileName = files[0].name.replace(/\.[^/.]+$/, "");
+        const generatedTitle = firstFileName + (files.length > 1 ? ` + ${files.length - 1} more` : "");
+        if (title === generatedTitle) {
+          setTitle("");
+        }
       }
     }
   };
@@ -183,7 +193,7 @@ export default function UploadPage() {
   };
 
   const resetForm = () => {
-    setFile(null);
+    setFiles([]);
     setClipboardContent("");
     setTitle("");
     setDescription("");
@@ -236,8 +246,8 @@ export default function UploadPage() {
       return;
     }
 
-    if (!file && !clipboardContent.trim()) {
-      toast.error('Please select a file or paste clipboard content');
+    if (files.length === 0 && !clipboardContent.trim()) {
+      toast.error('Please select files or paste clipboard content');
       return;
     }
 
@@ -252,26 +262,46 @@ export default function UploadPage() {
       let documentType = "text/plain";
       let documentSize = 0;
       
-      if (file) {
-        // Process file upload
-        setProgress(25);
-        const formData = new FormData();
-        formData.append('file', file);
+      if (files.length > 0) {
+        // Process file uploads
+        setProgress(10);
         
-        const response = await fetch('/api/process-document', {
-          method: 'POST',
-          body: formData,
-        });
+        // Process each file sequentially and concatenate contents
+        let combinedContent = "";
+        let totalSize = 0;
         
-        if (!response.ok) {
-          throw new Error('Failed to process document');
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await fetch('/api/process-document', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to process document ${file.name}`);
+          }
+          
+          const result = await response.json();
+          
+          // Add file name as a header if there are multiple files
+          if (files.length > 1) {
+            combinedContent += `\n\n==== ${file.name} ====\n\n`;
+          }
+          
+          combinedContent += result.content;
+          totalSize += file.size;
+          
+          // Update progress for each file
+          setProgress(10 + Math.round((i + 1) / files.length * 50));
         }
         
-        const result = await response.json();
-        content = result.content;
-        documentName = file.name;
-        documentType = file.type;
-        documentSize = file.size;
+        content = combinedContent;
+        documentName = files.length === 1 ? files[0].name : `${files.length} Combined Documents`;
+        documentType = files.length === 1 ? files[0].type : "text/plain";
+        documentSize = totalSize;
       } else {
         // Use clipboard content
         content = clipboardContent;
@@ -346,31 +376,60 @@ export default function UploadPage() {
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
                   isDragOver
                     ? 'border-blue-500 bg-blue-50'
-                    : file
+                    : files.length > 0
                     ? 'border-green-500 bg-green-50'
                     : 'border-gray-300 hover:border-gray-400'
                 }`}
               >
-                {file ? (
+                {files.length > 0 ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-center">
                       <FileText className="h-12 w-12 text-green-600" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{file.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+                    <div className="max-h-48 overflow-y-auto">
+                      {files.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between mb-2 p-2 bg-white rounded-lg">
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4 text-blue-600 mr-2" />
+                            <div className="text-left">
+                              <p className="font-medium text-sm text-gray-900 truncate max-w-[200px]">{file.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={removeFile}
-                      className="mt-2"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeFile()}
+                        className="mt-2"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remove All
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add More
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -379,11 +438,11 @@ export default function UploadPage() {
                     </div>
                     <div>
                       <p className="text-lg font-medium text-gray-900">
-                        Drag and drop your file here
+                        Drag and drop your files here
                       </p>
                       <p className="text-gray-500">or click to browse</p>
                       <p className="text-sm text-gray-400 mt-2">
-                        Supports PDF, DOCX, and TXT files (max 10MB)
+                        Supports PDF, DOCX, and TXT files (max 10MB each)
                       </p>
                     </div>
                     <div className="flex justify-center">
@@ -394,6 +453,7 @@ export default function UploadPage() {
                           className="hidden"
                           accept=".pdf,.docx,.txt,.doc"
                           onChange={handleFileChange}
+                          multiple
                           tabIndex={-1}
                           aria-hidden="true"
                         />
@@ -403,7 +463,7 @@ export default function UploadPage() {
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <FileImage className="mr-2 h-4 w-4" />
-                          Choose File
+                          Choose Files
                         </Button>
                       </Label>
                     </div>
@@ -525,7 +585,7 @@ export default function UploadPage() {
                 </Button>
                 <Button
                   onClick={processUpload}
-                  disabled={isProcessing || (!file && !clipboardContent) || !title.trim()}
+                  disabled={isProcessing || (!files && !clipboardContent) || !title.trim()}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 >
                   {isProcessing ? (
