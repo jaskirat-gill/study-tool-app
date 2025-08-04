@@ -1,10 +1,14 @@
 'use client'
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, BookOpen, GraduationCap, Zap, FileText, ArrowRight, CheckCircle, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -92,6 +96,27 @@ const testimonials = [
 ];
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (user) {
+    return null; // Will redirect to dashboard
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50">
       {/* Navigation */}
