@@ -89,7 +89,7 @@ export default function StudySetsPage() {
           description="Upload your first document to create AI-powered flashcards and start studying!"
           actionButton={{
             label: "Create Your First Study Set",
-            href: "/upload",
+            href: "dashboard/upload",
             icon: Upload,
           }}
         />
@@ -105,7 +105,7 @@ export default function StudySetsPage() {
           subtitle="Manage your AI-generated flashcard collections"
           actionButton={{
             label: "Create New Set",
-            href: "/upload",
+            href: "dashboard/upload",
             icon: Upload,
           }}
           showSearch
@@ -196,7 +196,7 @@ export default function StudySetsPage() {
                   {/* Actions */}
                   <div className="flex space-x-2">
                     <Button asChild size="sm" className="flex-1">
-                      <Link href={`/study-sets/${studySet.id}`}>
+                      <Link href={`dashboard/study-sets/${studySet.id}`}>
                         <Play className="mr-2 h-4 w-4" />
                         Study
                       </Link>
@@ -207,7 +207,7 @@ export default function StudySetsPage() {
                       size="sm"
                       className="flex-1"
                     >
-                      <Link href={`/study-sets/${studySet.id}/practice`}>
+                      <Link href={`dashboard/study-sets/${studySet.id}/practice`}>
                         Practice Exam
                       </Link>
                     </Button>

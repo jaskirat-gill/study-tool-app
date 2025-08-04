@@ -6,12 +6,14 @@ ALTER TABLE IF EXISTS public.study_sets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.flashcards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.study_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.study_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.document_uploads ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing tables if they exist (for clean setup)
 DROP TABLE IF EXISTS public.study_sessions CASCADE;
 DROP TABLE IF EXISTS public.flashcards CASCADE;
 DROP TABLE IF EXISTS public.study_sets CASCADE;
 DROP TABLE IF EXISTS public.study_notes CASCADE;
+DROP TABLE IF EXISTS public.document_uploads CASCADE;
 
 -- Create study_sets table
 CREATE TABLE public.study_sets (
@@ -162,5 +164,40 @@ CREATE TRIGGER update_study_sets_last_modified
 
 CREATE TRIGGER update_study_notes_last_modified
     BEFORE UPDATE ON public.study_notes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified();
+
+-- Create document_uploads table
+CREATE TABLE public.document_uploads (
+    id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    size BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    description TEXT,
+    created TIMESTAMPTZ DEFAULT NOW(),
+    last_modified TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for document_uploads
+CREATE INDEX idx_document_uploads_user_id ON public.document_uploads(user_id);
+
+-- Create RLS policies for document_uploads
+CREATE POLICY "Users can view their own document uploads" ON public.document_uploads
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own document uploads" ON public.document_uploads
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own document uploads" ON public.document_uploads
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own document uploads" ON public.document_uploads
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- Create trigger for document_uploads last_modified
+CREATE TRIGGER update_document_uploads_last_modified
+    BEFORE UPDATE ON public.document_uploads
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified();

@@ -7,19 +7,19 @@ import { PlusCircle, BookOpen, GraduationCap } from 'lucide-react';
 const quickActions = [
   {
     name: 'Upload Document',
-    href: '/upload',
+    href: 'dashboard/upload',
     icon: PlusCircle,
     description: 'Upload your study materials and let AI do the rest.'
   },
   {
     name: 'Create Flashcards',
-    href: '/study-sets/create',
+    href: 'dashboard/study-sets/create',
     icon: BookOpen,
     description: 'Turn your notes into smart, interactive flashcards.'
   },
   {
     name: 'Generate Exam',
-    href: '/exams/create',
+    href: 'dashboard/exams/create',
     icon: GraduationCap,
     description: 'Test your knowledge with AI-generated practice exams.'
   },

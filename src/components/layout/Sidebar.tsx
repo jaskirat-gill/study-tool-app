@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,21 +13,27 @@ import {
   Settings,
   LogOut,
   User,
-  BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Upload', href: '/upload', icon: Upload },
-  { name: 'Flashcards', href: '/study-sets', icon: BookOpen },
-  { name: 'Exams', href: '/exams', icon: GraduationCap },
-  { name: 'Notes', href: '/notes', icon: FileText },
+  { name: 'Upload', href: '/dashboard/upload', icon: Upload },
+  { name: 'Flashcards', href: '/dashboard/study-sets', icon: BookOpen },
+  { name: 'Exams', href: '/dashboard/exams', icon: GraduationCap },
+  { name: 'Notes', href: '/dashboard/notes', icon: FileText },
 ];
+
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   return (
     <motion.div 
@@ -72,7 +78,7 @@ export function Sidebar() {
             Navigation
           </h3>
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isActive = pathname === item.href;
             return (
               <Link key={item.name} href={item.href}>
                 <motion.div
@@ -106,7 +112,7 @@ export function Sidebar() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={signOut}
+            onClick={handleSignOut}
             className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4 mr-3" />
