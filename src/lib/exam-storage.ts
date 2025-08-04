@@ -83,26 +83,56 @@ export async function getPracticeExams(user: User): Promise<PracticeExam[]> {
       throw examsError;
     }
 
-    return exams.map(exam => ({
+    type DBExamQuestion = {
+      id: string;
+      question: string;
+      type: 'multiple-choice' | 'fill-in-blank' | 'short-answer';
+      options?: string | null;
+      correct_answer?: string | null;
+      explanation?: string | null;
+      difficulty?: string | null;
+      manual_score?: number | null;
+    };
+
+    type DBExam = {
+      id: string;
+      title: string;
+      duration: number;
+      created: string;
+      document_id: string;
+      exam_questions: DBExamQuestion[];
+    };
+
+    return (exams as DBExam[]).map((exam) => ({
       id: exam.id,
       title: exam.title,
       duration: exam.duration,
       created: new Date(exam.created),
       studySetId: exam.document_id, // Map from document_id to studySetId
-      questions: exam.exam_questions.map((q: any) => ({
-        id: q.id,
-        question: q.question,
-        type: q.type,
-        options: q.options ? JSON.parse(q.options) : undefined,
-        correctAnswer: q.correct_answer !== null 
-          ? q.type === 'multiple-choice' 
-            ? parseInt(q.correct_answer) 
-            : q.correct_answer
-          : undefined,
-        explanation: q.explanation,
-        difficulty: q.difficulty,
-        manualScore: q.manual_score
-      }))
+      questions: exam.exam_questions.map((q) => {
+        // Ensure difficulty is one of the allowed values
+        const allowedDifficulties = ['easy', 'medium', 'hard'] as const;
+        const rawDifficulty = (q.difficulty ?? '').toLowerCase();
+        const isAllowedDifficulty = (d: string): d is 'easy' | 'medium' | 'hard' =>
+          allowedDifficulties.includes(d as 'easy' | 'medium' | 'hard');
+        const difficulty: 'easy' | 'medium' | 'hard' = isAllowedDifficulty(rawDifficulty)
+          ? rawDifficulty as 'easy' | 'medium' | 'hard'
+          : 'medium';
+        return {
+          id: q.id,
+          question: q.question,
+          type: q.type,
+          options: q.options ? JSON.parse(q.options) as string[] : undefined,
+          correctAnswer: q.correct_answer !== null 
+            ? q.type === 'multiple-choice' 
+              ? parseInt(q.correct_answer as string) 
+              : q.correct_answer
+            : undefined,
+          explanation: q.explanation ?? undefined,
+          difficulty,
+          manualScore: q.manual_score ?? undefined
+        };
+      })
     }));
   } catch (error) {
     console.error('Error loading practice exams:', error);
@@ -128,26 +158,56 @@ export async function getPracticeExam(id: string, user: User): Promise<PracticeE
       throw error;
     }
 
+    type DBExamQuestion = {
+      id: string;
+      question: string;
+      type: 'multiple-choice' | 'fill-in-blank' | 'short-answer';
+      options?: string | null;
+      correct_answer?: string | null;
+      explanation?: string | null;
+      difficulty?: string | null;
+      manual_score?: number | null;
+    };
+
+    type DBExam = {
+      id: string;
+      title: string;
+      duration: number;
+      created: string;
+      document_id: string;
+      exam_questions: DBExamQuestion[];
+    };
+
+    const dbExam = exam as DBExam;
     return {
-      id: exam.id,
-      title: exam.title,
-      duration: exam.duration,
-      created: new Date(exam.created),
-      studySetId: exam.document_id, // Map from document_id to studySetId
-      questions: exam.exam_questions.map((q: any) => ({
-        id: q.id,
-        question: q.question,
-        type: q.type,
-        options: q.options ? JSON.parse(q.options) : undefined,
-        correctAnswer: q.correct_answer !== null 
-          ? q.type === 'multiple-choice' 
-            ? parseInt(q.correct_answer) 
-            : q.correct_answer
-          : undefined,
-        explanation: q.explanation,
-        difficulty: q.difficulty,
-        manualScore: q.manual_score
-      }))
+      id: dbExam.id,
+      title: dbExam.title,
+      duration: dbExam.duration,
+      created: new Date(dbExam.created),
+      studySetId: dbExam.document_id, // Map from document_id to studySetId
+      questions: dbExam.exam_questions.map((q) => {
+        const allowedDifficulties = ['easy', 'medium', 'hard'] as const;
+        const rawDifficulty = (q.difficulty ?? '').toLowerCase();
+        const isAllowedDifficulty = (d: string): d is 'easy' | 'medium' | 'hard' =>
+          allowedDifficulties.includes(d as 'easy' | 'medium' | 'hard');
+        const difficulty: 'easy' | 'medium' | 'hard' = isAllowedDifficulty(rawDifficulty)
+          ? rawDifficulty as 'easy' | 'medium' | 'hard'
+          : 'medium';
+        return {
+          id: q.id,
+          question: q.question,
+          type: q.type,
+          options: q.options ? JSON.parse(q.options) as string[] : undefined,
+          correctAnswer: q.correct_answer !== null 
+            ? q.type === 'multiple-choice' 
+              ? parseInt(q.correct_answer as string) 
+              : q.correct_answer
+            : undefined,
+          explanation: q.explanation ?? undefined,
+          difficulty,
+          manualScore: q.manual_score ?? undefined
+        };
+      })
     };
   } catch (error) {
     console.error('Error loading practice exam:', error);
