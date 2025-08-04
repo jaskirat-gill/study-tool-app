@@ -66,7 +66,6 @@ export default function GenerateFlashCards() {
       }
       const response = await flashcardsResponse.json();
       const flashcards = response.flashcards || response;
-      console.log('Received flashcards:', flashcards);
       if (!Array.isArray(flashcards)) {
         console.error('Unexpected flashcards format:', flashcards);
         throw new Error('Received invalid flashcards data format from server');

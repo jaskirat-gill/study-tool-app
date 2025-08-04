@@ -27,9 +27,9 @@ export interface PracticeExam {
   id: string;
   title: string;
   questions: ExamQuestion[];
-  duration: number; // in minutes
+  duration: number; // in minutes, can be 0 if no duration
   created: Date;
-  studySetId: string;
+  studySetId: string; // This now refers to document_id in the database
 }
 
 export interface ExamQuestion {
