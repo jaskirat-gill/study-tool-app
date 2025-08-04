@@ -1,5 +1,5 @@
 'use client'
-
+import { Analytics } from '@vercel/analytics/next';
 import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -32,6 +32,7 @@ export default function AuthenticatedLayout({ children }: AuthenticatedLayoutPro
         <main className="flex-1 ml-64">
           <div className="p-8">
             {children}
+            <Analytics />
           </div>
         </main>
       </div>
