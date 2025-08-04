@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getDocumentUploads, saveStudySet } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { DocumentUpload } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { getDocumentUploads } from "@/lib/storage/document-storage";
+import { saveStudySet } from "@/lib/storage/study-set-storage";
 
 export default function GenerateFlashCards() {
   const router = useRouter();

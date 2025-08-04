@@ -1,5 +1,5 @@
 import { PracticeExam, User } from '@/types';
-import { supabase } from './supabase/client';
+import { supabase } from '../supabase/client';
 
 // Save or update a practice exam
 export async function savePracticeExam(exam: PracticeExam, user: User): Promise<void> {

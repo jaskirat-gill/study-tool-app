@@ -19,12 +19,11 @@ import {
   Trash2,
   Play,
 } from "lucide-react";
-import { getStudySets, deleteStudySet } from "@/lib/storage";
+import { getStudySets, deleteStudySet } from "@/lib/storage/study-set-storage";
 import { toast } from "react-hot-toast";
 import { StudySet } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
-// ...existing code...
 import { EmptyState } from "@/components/EmptyState";
 import { NoSearchResults } from "@/components/NoSearchResults";
 import { formatDate } from "@/lib/utils";

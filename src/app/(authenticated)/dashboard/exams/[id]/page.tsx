@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPracticeExam, deletePracticeExam } from "@/lib/exam-storage";
+import { getPracticeExam, deletePracticeExam } from "@/lib/storage/exam-storage";
 import { PracticeExam } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

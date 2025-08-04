@@ -18,7 +18,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { getStudyNotes, deleteStudyNote } from "@/lib/storage";
+import { getStudyNotes, deleteStudyNote } from "@/lib/storage/study-notes-storage";
 import { StudyNotes } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";

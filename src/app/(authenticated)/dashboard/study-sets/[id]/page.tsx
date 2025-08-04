@@ -18,7 +18,7 @@ import {
   BookOpen,
   Trophy
 } from 'lucide-react';
-import { getStudySet, saveStudySet } from '@/lib/storage';
+import { getStudySet, saveStudySet } from '@/lib/storage/study-set-storage';
 import { StudySet } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import NotLoggedInPrompt from '@/components/NotLoggedInPrompt';

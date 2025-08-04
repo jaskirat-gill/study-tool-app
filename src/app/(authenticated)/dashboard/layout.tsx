@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import NotLoggedInPrompt from '@/components/NotLoggedInPrompt';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { Sidebar } from '@/components/Sidebar';
 
 interface AuthenticatedLayoutProps {
   children: ReactNode;

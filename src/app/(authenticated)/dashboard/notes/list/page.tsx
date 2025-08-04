@@ -20,7 +20,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { getStudyNotes, deleteStudyNote } from "@/lib/storage";
+import { getStudyNotes, deleteStudyNote } from "@/lib/storage/study-notes-storage";
 import { StudyNotes } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";

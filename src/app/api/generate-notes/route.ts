@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateStudyNotes } from '@/lib/langchain/gemini-client';
+import { generateStudyNotes } from '@/lib/langchain/service';
 
 export async function POST(request: NextRequest) {
   try {

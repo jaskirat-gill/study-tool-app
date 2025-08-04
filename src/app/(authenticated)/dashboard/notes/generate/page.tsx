@@ -22,7 +22,7 @@ import {
   CheckCircle,
   Sparkles,
 } from "lucide-react";
-import { saveStudyNotes } from "@/lib/storage";
+import { saveStudyNotes } from "@/lib/storage/study-notes-storage";
 import { StudyNotes } from "@/types";
 import { generateId } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";

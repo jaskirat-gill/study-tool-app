@@ -18,7 +18,7 @@ import {
   Upload,
   Clock
 } from "lucide-react";
-import { getPracticeExams, deletePracticeExam } from "@/lib/exam-storage";
+import { getPracticeExams, deletePracticeExam } from "@/lib/storage/exam-storage";
 import { toast } from "react-hot-toast";
 import { PracticeExam } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";

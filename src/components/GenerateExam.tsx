@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getDocumentUploads } from "@/lib/storage";
-import { savePracticeExam } from "@/lib/exam-storage";
-import { generateExamQuestions } from "@/lib/gemini-client";
+import { getDocumentUploads } from "@/lib/storage/document-storage";
+import { savePracticeExam } from "@/lib/storage/exam-storage";
+import { generateExamQuestions } from "@/lib/controller";
 import { useAuth } from "@/contexts/AuthContext";
 import { DocumentUpload } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { generateId } from "@/lib/utils";
 
 export default function GenerateExam() {
   const router = useRouter();
@@ -103,7 +104,7 @@ export default function GenerateExam() {
       }
       
       const exam = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         title,
         questions: result.examQuestions,
         duration: 0, // Set to 0 as we're not using duration anymore

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateFlashcards } from '@/lib/langchain/gemini-client';
+import { generateFlashcards } from '@/lib/langchain/service';
 
 export async function POST(request: NextRequest) {
   try {

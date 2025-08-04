@@ -9,3 +9,15 @@ export interface AuthUser {
   user: User | null;
   loading: boolean;
 }
+
+// Document Upload interface for storing raw documents
+export interface DocumentUpload {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  content: string;
+  created: Date;
+  lastModified: Date;
+  description?: string;
+}

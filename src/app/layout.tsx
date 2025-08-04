@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Study Tool - AI-Powered Flashcards",
+  title: "StudyFlow - AI-Powered Education",
   description: "Upload documents and generate AI-powered flashcards and practice exams",
 };
 

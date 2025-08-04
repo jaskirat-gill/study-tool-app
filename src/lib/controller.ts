@@ -1,4 +1,5 @@
-import { GeminiResponse } from '@/types';
+import { DocumentProcessingResult, GeminiResponse } from '@/types';
+import { validateFileSize, validateFileType } from './utils';
 
 export async function generateFlashcards(content: string, count: number = 10): Promise<GeminiResponse> {
   try {
@@ -83,6 +84,55 @@ export async function generateStudyNotes(content: string): Promise<{ notes?: str
   } catch (error) {
     return { 
       error: `Error generating notes: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
+  }
+}
+
+export async function extractTextFromFile(file: File): Promise<DocumentProcessingResult> {
+  try {
+    // Validate file type
+    if (!validateFileType(file)) {
+      return {
+        success: false,
+        error: 'Unsupported file type. Please upload a TXT, PDF, or DOCX file.',
+      };
+    }
+
+    // Validate file size (10MB limit)
+    if (!validateFileSize(file, 10)) {
+      return {
+        success: false,
+        error: 'File size must be less than 10MB',
+      };
+    }
+
+    // Create form data and send to API
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/process-document', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || 'Failed to process document',
+      };
+    }
+
+    return {
+      success: true,
+      content: result.content,
+    };
+
+  } catch (error) {
+    return {
+      success: false,
+      error: `Error processing file: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }

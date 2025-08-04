@@ -32,7 +32,7 @@ import {
   saveDocumentUpload, 
   getDocumentUploads, 
   deleteDocumentUpload, 
-} from "@/lib/storage";
+} from "@/lib/storage/document-storage";
 import { DocumentUpload } from "@/types";
 import { generateId } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
