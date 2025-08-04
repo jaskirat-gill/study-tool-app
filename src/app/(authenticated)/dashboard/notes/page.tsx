@@ -22,10 +22,10 @@ import { getStudyNotes, deleteStudyNote } from "@/lib/storage/study-notes-storag
 import { StudyNotes } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import NotLoggedInPrompt from "@/components/NotLoggedInPrompt";
-import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { NoSearchResults } from "@/components/NoSearchResults";
 import { formatDate } from "@/lib/utils";
+
 
 export default function NotesListPage() {
   const [notes, setNotes] = useState<StudyNotes[]>([]);
@@ -61,7 +61,11 @@ export default function NotesListPage() {
   }, [notes, searchQuery]);
 
   if (!user) {
-    return <NotLoggedInPrompt />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 flex items-center justify-center">
+        <NotLoggedInPrompt />
+      </div>
+    );
   }
 
   const handleDelete = async (id: string) => {
@@ -83,61 +87,81 @@ export default function NotesListPage() {
     return content.substring(0, maxLength).trim() + "...";
   };
 
+
   if (notes.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          <PageHeader
-            title="Study Notes"
-            subtitle="AI-generated comprehensive review notes"
-            actionButton={{
-              label: "Generate Notes",
-              href: "/notes/generate",
-              icon: Plus,
-            }}
-          />
-
-          <EmptyState
-            icon={FileText}
-            title="No Study Notes Yet"
-            description="Create your first set of AI-generated study notes from clipboard content."
-            actionButton={{
-              label: "Generate Your First Notes",
-              href: "/notes/generate",
-              icon: Sparkles,
-            }}
-          />
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 flex items-center justify-center pb-16">
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-6">
+            <div className="text-center max-w-3xl mx-auto space-y-4">
+              <h1 className="text-4xl md:text-5xl pb-2 font-bold tracking-tight bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent flex items-center justify-center gap-2">
+                <Sparkles className="h-8 w-8 text-primary" />
+                Study Notes
+              </h1>
+              <p className="text-muted-foreground">
+                AI-generated comprehensive review notes
+              </p>
+            </div>
+            <EmptyState
+              icon={FileText}
+              title="No Study Notes Yet"
+              description="Create your first set of AI-generated study notes from clipboard content."
+              actionButton={{
+                label: "Generate Your First Notes",
+                href: "/dashboard/notes/generate",
+                icon: Sparkles,
+              }}
+            />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
-        <PageHeader
-          title="Study Notes"
-          subtitle="Manage your AI-generated study notes"
-          actionButton={{
-            label: "Generate New Notes",
-            href: "/notes/generate",
-            icon: Plus,
-          }}
-          showSearch
-          searchPlaceholder="Search notes..."
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 pb-16">
+      {/* Header Section */}
+      <section className="container mx-auto px-4 pt-12 pb-6">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <h1 className="text-4xl md:text-5xl pb-2 font-bold tracking-tight bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent flex items-center justify-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" />
+            Study Notes
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your AI-generated study notes
+          </p>
+        </div>
+      </section>
 
-        {/* Stats */}
+      {/* Search & Stats Section */}
+      <section className="container mx-auto px-4 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex-1 flex items-center max-w-md">
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
+          />
+        </div>
+        <Link href="/dashboard/notes/generate">
+          <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 h-auto font-semibold flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Generate New Notes
+          </Button>
+        </Link>
+      </section>
+
+      {/* Stats */}
+      <section className="container mx-auto px-4 pb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
+          <Card className="border-0 shadow bg-white/80">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{notes.length}</div>
               <p className="text-xs text-muted-foreground">Total Notes</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow bg-white/80">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{filteredNotes.length}</div>
               <p className="text-xs text-muted-foreground">
@@ -145,7 +169,7 @@ export default function NotesListPage() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow bg-white/80">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">
                 {
@@ -162,19 +186,21 @@ export default function NotesListPage() {
             </CardContent>
           </Card>
         </div>
+      </section>
 
-        {/* Notes Grid */}
+      {/* Notes Grid */}
+      <section className="container mx-auto px-4">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredNotes.map((note) => (
             <Card
               key={note.id}
-              className="group hover:shadow-md transition-shadow"
+              className="group hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50/80"
             >
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                 <div className="space-y-1 flex-1 min-w-0">
                   <CardTitle className="text-lg line-clamp-2">
                     <Link
-                      href={`/notes/${note.id}`}
+                      href={`dashboard/notes/${note.id}`}
                       className="hover:text-primary transition-colors"
                     >
                       {note.title}
@@ -218,7 +244,7 @@ export default function NotesListPage() {
                     size="sm"
                     className="w-full"
                   >
-                    <Link href={`/notes/${note.id}`}>View Notes</Link>
+                    <Link href={`dashboard/notes/${note.id}`}>View Notes</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -228,9 +254,11 @@ export default function NotesListPage() {
 
         {/* No Results */}
         {searchQuery && filteredNotes.length === 0 && (
-          <NoSearchResults searchQuery={searchQuery} itemType="notes" />
+          <div className="pt-12">
+            <NoSearchResults searchQuery={searchQuery} itemType="notes" />
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

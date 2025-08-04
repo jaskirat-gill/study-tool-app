@@ -36,7 +36,7 @@ export default function StudyNotePage() {
         if (note) {
           setStudyNote(note);
         } else {
-          router.push("/notes");
+          router.push("/dashboard/notes");
         }
       }
     };
@@ -44,7 +44,11 @@ export default function StudyNotePage() {
   }, [params.id, router, user]);
 
   if (!user) {
-    return <NotLoggedInPrompt />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 flex items-center justify-center">
+        <NotLoggedInPrompt />
+      </div>
+    );
   }
   const handleDelete = async () => {
     if (!studyNote || isDeleting) return;
@@ -57,7 +61,7 @@ export default function StudyNotePage() {
     setIsDeleting(true);
     try {
       await deleteStudyNote(studyNote.id, user);
-      router.push("/notes");
+      router.push("/dashboard/notes");
     } catch (error) {
       console.error("Error deleting notes:", error);
       setIsDeleting(false);
@@ -311,27 +315,28 @@ export default function StudyNotePage() {
 
   if (!studyNote) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="text-center">
-          <p>Loading notes...</p>
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 flex items-center justify-center">
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <p>Loading notes...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 pb-16">
+      {/* Header Section */}
+      <section className="container mx-auto px-4 pt-12 pb-6 max-w-4xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <Button variant="ghost" asChild>
-            <Link href="/notes">
+            <Link href="/dashboard/notes">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Notes
             </Link>
           </Button>
-
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col md:flex-row md:items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleCopyContent}>
               <Copy className="h-4 w-4 mr-2" />
               Copy
@@ -351,20 +356,23 @@ export default function StudyNotePage() {
             </Button>
           </div>
         </div>
+      </section>
 
-        {/* Notes Header */}
-        <Card>
+      {/* Notes Header */}
+      <section className="container mx-auto px-4 pb-6 max-w-4xl">
+        <Card className="border-0 shadow bg-white/80">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <CardTitle className="text-2xl">{studyNote.title}</CardTitle>
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+                  {studyNote.title}
+                </CardTitle>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
                     <span>Created {formatDate(studyNote.created)}</span>
                   </div>
-                  {studyNote.lastModified.getTime() !==
-                    studyNote.created.getTime() && (
+                  {studyNote.lastModified.getTime() !== studyNote.created.getTime() && (
                     <div className="flex items-center space-x-1">
                       <Clock className="h-4 w-4" />
                       <span>Modified {formatDate(studyNote.lastModified)}</span>
@@ -379,19 +387,23 @@ export default function StudyNotePage() {
             </div>
           </CardHeader>
         </Card>
+      </section>
 
-        {/* Notes Content */}
-        <Card>
+      {/* Notes Content */}
+      <section className="container mx-auto px-4 max-w-4xl">
+        <Card className="border-0 shadow bg-gradient-to-br from-white via-blue-50/60 to-indigo-50/80">
           <CardContent className="pt-6">
             <div className="prose prose-sm max-w-none">
               {renderMarkdown(studyNote.content)}
             </div>
           </CardContent>
         </Card>
+      </section>
 
-        {/* Source Content (if available) */}
-        {studyNote.sourceContent && (
-          <Card>
+      {/* Source Content (if available) */}
+      {studyNote.sourceContent && (
+        <section className="container mx-auto px-4 max-w-4xl pt-6">
+          <Card className="border-0 shadow bg-white/80">
             <CardHeader>
               <CardTitle className="text-lg">Source Content</CardTitle>
             </CardHeader>
@@ -403,8 +415,8 @@ export default function StudyNotePage() {
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }
