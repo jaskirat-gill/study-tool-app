@@ -137,7 +137,7 @@ export async function getPracticeExams(user: User): Promise<PracticeExam[]> {
   } catch (error) {
     console.error('Error loading practice exams:', error);
     return [];
-  }
+  } 
 }
 
 // Get a single practice exam by ID
