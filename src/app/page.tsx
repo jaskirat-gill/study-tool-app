@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import LandingPage from '@/components/landing/LandingPage';
+import dynamic from 'next/dynamic';
+
+// Import the landing page with no SSR to avoid client/server component mismatch
+const LandingPage = dynamic(() => import('@/components/landing/LandingPage'), { ssr: false });
 
 export default async function RootPage() {
+  // Use the correct syntax for cookies in Next.js App Router
   const cookieStore = await cookies();
   
   const supabase = createServerClient(
@@ -11,15 +15,10 @@ export default async function RootPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
+        get(name) {
+          return cookieStore.get(name)?.value;
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
+      }
     }
   );
 

@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProviderWrapper } from "@/components/AuthProviderWrapper";
-import { Toaster } from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+// Import client components with dynamic imports to avoid SSR issues
+const DynamicAuthProviderWrapper = dynamic(
+  () => import("@/components/AuthProviderWrapper").then(mod => mod.AuthProviderWrapper),
+  { ssr: false }
+);
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +34,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProviderWrapper>
+        <DynamicAuthProviderWrapper>
           {children}
-          <Toaster position="top-right" />
-        </AuthProviderWrapper>
+        </DynamicAuthProviderWrapper>
       </body>
     </html>
   );
