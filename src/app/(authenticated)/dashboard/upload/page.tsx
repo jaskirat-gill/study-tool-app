@@ -261,45 +261,39 @@ export default function UploadPage() {
       let documentName = title;
       let documentType = "text/plain";
       let documentSize = 0;
-      
+
       if (files.length > 0) {
         // Process file uploads
         setProgress(10);
-        
         // Process each file sequentially and concatenate contents
         let combinedContent = "";
         let totalSize = 0;
-        
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           const formData = new FormData();
           formData.append('file', file);
-          
           const response = await fetch('/api/process-document', {
             method: 'POST',
             body: formData,
           });
-          
           if (!response.ok) {
             throw new Error(`Failed to process document ${file.name}`);
           }
-          
           const result = await response.json();
-          
           // Add file name as a header if there are multiple files
           if (files.length > 1) {
             combinedContent += `\n\n==== ${file.name} ====\n\n`;
           }
-          
           combinedContent += result.content;
           totalSize += file.size;
-          
           // Update progress for each file
           setProgress(10 + Math.round((i + 1) / files.length * 50));
         }
-        
         content = combinedContent;
-        documentName = files.length === 1 ? files[0].name : `${files.length} Combined Documents`;
+        // Only set documentName if the user did not provide a title
+        if (!title || !title.trim()) {
+          documentName = files.length === 1 ? files[0].name : `${files.length} Combined Documents`;
+        }
         documentType = files.length === 1 ? files[0].type : "text/plain";
         documentSize = totalSize;
       } else {
@@ -381,6 +375,18 @@ export default function UploadPage() {
                     : 'border-gray-300 hover:border-gray-400'
                 }`}
               >
+                {/* Always render the file input, but keep it hidden */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.docx,.txt,.doc"
+                  onChange={handleFileChange}
+                  multiple
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+
                 {files.length > 0 ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-center">
@@ -419,7 +425,6 @@ export default function UploadPage() {
                         <X className="h-4 w-4 mr-2" />
                         Remove All
                       </Button>
-                      
                       <Button
                         variant="outline"
                         size="sm"
@@ -447,16 +452,6 @@ export default function UploadPage() {
                     </div>
                     <div className="flex justify-center">
                       <Label className="flex flex-col items-center cursor-pointer">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.docx,.txt,.doc"
-                          onChange={handleFileChange}
-                          multiple
-                          tabIndex={-1}
-                          aria-hidden="true"
-                        />
                         <Button
                           variant="outline"
                           type="button"
