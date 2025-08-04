@@ -13,7 +13,6 @@ import {
   Settings,
   LogOut,
   User,
-  PlusCircle,
   BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,12 +23,6 @@ const navigation = [
   { name: 'Flashcards', href: '/study-sets', icon: BookOpen },
   { name: 'Exams', href: '/exams', icon: GraduationCap },
   { name: 'Notes', href: '/notes', icon: FileText },
-];
-
-const quickActions = [
-  { name: 'Upload Document', href: '/upload', icon: PlusCircle },
-  { name: 'Create Flashcards', href: '/study-sets/create', icon: BookOpen },
-  { name: 'Generate Exam', href: '/exams/create', icon: GraduationCap },
 ];
 
 export function Sidebar() {
@@ -73,27 +66,6 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Quick Actions
-          </h3>
-          <div className="space-y-2">
-            {quickActions.map((action) => (
-              <Link key={action.name} href={action.href}>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                >
-                  <action.icon className="h-4 w-4 mr-3" />
-                  {action.name}
-                </Button>
-              </Link>
-            ))}
-          </div>
-        </div>
-
         {/* Navigation */}
         <nav className="flex-1 px-6 py-4 space-y-1">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -120,20 +92,6 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Stats Section */}
-        <div className="px-6 py-4 border-t border-gray-100">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Study Progress</span>
-              <BarChart3 className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="text-2xl font-bold text-blue-600 mb-1">75%</div>
-            <div className="text-xs text-gray-500">This week</div>
-            <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '75%' }}></div>
-            </div>
-          </div>
-        </div>
 
         {/* Bottom Actions */}
         <div className="px-6 py-4 border-t border-gray-200 space-y-2">
