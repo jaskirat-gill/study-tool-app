@@ -3,7 +3,7 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { Document } from '@langchain/core/documents';
 
 // Initialize model
-export const getGeminiModel = (modelName: string = 'gemini-2.0-flash-exp') => {
+export const getGeminiModel = (modelName: string = 'gemini-2.5-flash') => {
   return new ChatGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY || '',
     model: modelName,
