@@ -3,7 +3,7 @@ import { generateFlashcards } from '@/lib/langchain/service';
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, count = 10 } = await request.json();
+    const { content, count = 10, difficulty = 3 } = await request.json();
 
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     const cardCount = Number(count) || 10;
-    const result = await generateFlashcards(content, cardCount);
+    const difficultyLevel = Number(difficulty) || 3;
+    const result = await generateFlashcards(content, cardCount, difficultyLevel);
 
     if (result.error) {
       return NextResponse.json(

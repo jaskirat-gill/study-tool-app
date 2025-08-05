@@ -3,7 +3,7 @@ import { generateExamQuestions } from '@/lib/langchain/service';
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, multipleChoice = 5, fillInBlank = 0, shortAnswer = 0, fillInBlankWordBank } = await request.json();
+    const { content, multipleChoice = 5, fillInBlank = 0, shortAnswer = 0, fillInBlankWordBank, difficulty = 3 } = await request.json();
 
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       mcCount, 
       fibCount, 
       saCount,
-      wordBank
+      wordBank,
+      Number(difficulty) || 3
     );
 
     if (result.error) {

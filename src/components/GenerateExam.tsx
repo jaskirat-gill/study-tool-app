@@ -33,6 +33,7 @@ export default function GenerateExam() {
   const [fillInBlankCount, setFillInBlankCount] = useState([0]); // Default to 0 FIB questions
   const [shortAnswerCount, setShortAnswerCount] = useState([0]); // Default to 0 SA questions
   const [fillInBlankWordBank, setFillInBlankWordBank] = useState<string>(''); // Word bank for fill-in-blank questions
+  const [difficulty, setDifficulty] = useState([3]); // Default to medium difficulty (1-5 scale)
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +84,8 @@ export default function GenerateExam() {
         multipleChoiceCount[0],
         fillInBlankCount[0],
         shortAnswerCount[0],
-        wordBankArray
+        wordBankArray,
+        difficulty[0]
       );
       
       if (result.error) {
@@ -301,6 +303,35 @@ export default function GenerateExam() {
                   </div>
                   <p className="text-xs text-gray-500">
                     Questions that require a brief text answer (1-2 sentences).
+                  </p>
+                </div>
+
+                {/* Difficulty Level */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="difficulty" className="text-sm">
+                      Difficulty Level: {['Very Easy', 'Easy', 'Medium', 'Hard', 'Very Hard'][difficulty[0] - 1]}
+                    </Label>
+                  </div>
+                  <div className="px-3">
+                    <Slider
+                      id="difficulty"
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={difficulty}
+                      onValueChange={setDifficulty}
+                      className="w-full"
+                      disabled={!selectedDoc || isProcessing}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Very Easy</span>
+                    <span>Medium</span>
+                    <span>Very Hard</span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Higher difficulty creates more challenging questions with complex concepts and deeper analysis.
                   </p>
                 </div>
 

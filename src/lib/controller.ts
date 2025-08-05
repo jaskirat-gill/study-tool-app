@@ -1,14 +1,14 @@
 import { DocumentProcessingResult, GeminiResponse } from '@/types';
 import { validateFileSize, validateFileType } from './utils';
 
-export async function generateFlashcards(content: string, count: number = 10): Promise<GeminiResponse> {
+export async function generateFlashcards(content: string, count: number = 10, difficulty: number = 3): Promise<GeminiResponse> {
   try {
     const response = await fetch('/api/generate-flashcards', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content, count }),
+      body: JSON.stringify({ content, count, difficulty }),
     });
 
     if (!response.ok) {
@@ -31,7 +31,8 @@ export async function generateExamQuestions(
   multipleChoice: number = 5,
   fillInBlank: number = 0,
   shortAnswer: number = 0,
-  fillInBlankWordBank?: string[]
+  fillInBlankWordBank?: string[],
+  difficulty: number = 3
 ): Promise<GeminiResponse> {
   try {
     const response = await fetch('/api/generate-exam', {
@@ -44,7 +45,8 @@ export async function generateExamQuestions(
         multipleChoice,
         fillInBlank,
         shortAnswer,
-        fillInBlankWordBank
+        fillInBlankWordBank,
+        difficulty
       }),
     });
 

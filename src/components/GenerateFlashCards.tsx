@@ -30,6 +30,7 @@ export default function GenerateFlashCards() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [flashcardCount, setFlashcardCount] = useState([15]);
+  const [difficulty, setDifficulty] = useState([3]); // Default to medium difficulty (1-5 scale)
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -59,7 +60,8 @@ export default function GenerateFlashCards() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: selectedDoc.content,
-          count: flashcardCount[0]
+          count: flashcardCount[0],
+          difficulty: difficulty[0]
         }),
       });
       if (!flashcardsResponse.ok) {
@@ -235,6 +237,29 @@ export default function GenerateFlashCards() {
                   <span>5</span>
                   <span>50</span>
                 </div>
+              </div>
+
+              {/* Difficulty Level */}
+              <div className="space-y-4">
+                <Label>
+                  Difficulty Level: {['Very Easy', 'Easy', 'Medium', 'Hard', 'Very Hard'][difficulty[0] - 1]}
+                </Label>
+                <Slider
+                  value={difficulty}
+                  onValueChange={setDifficulty}
+                  max={5}
+                  min={1}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Very Easy</span>
+                  <span>Medium</span>
+                  <span>Very Hard</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Higher difficulty creates flashcards with more complex concepts and challenging questions.
+                </p>
               </div>
 
               {/* Progress Bar */}

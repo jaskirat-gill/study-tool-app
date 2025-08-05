@@ -5,17 +5,49 @@ import { GeminiResponse } from '@/types';
 import { z } from 'zod';
 import { AIMessage } from '@langchain/core/messages';
 
+// Helper function to convert difficulty number to descriptive text and instructions
+function getDifficultyInstructions(difficulty: number): { level: string; instructions: string } {
+  const levels = {
+    1: {
+      level: "Very Easy",
+      instructions: "Focus on basic definitions, simple recall, and fundamental concepts. Use straightforward language and avoid complex analysis."
+    },
+    2: {
+      level: "Easy", 
+      instructions: "Include basic concepts with some simple application. Questions should test understanding of key terms and straightforward relationships."
+    },
+    3: {
+      level: "Medium",
+      instructions: "Balance recall and application. Include questions that require understanding relationships between concepts and moderate analysis."
+    },
+    4: {
+      level: "Hard",
+      instructions: "Emphasize analysis, synthesis, and application of concepts. Questions should require deeper thinking and connecting multiple ideas."
+    },
+    5: {
+      level: "Very Hard",
+      instructions: "Focus on complex analysis, evaluation, and synthesis. Questions should require critical thinking, comparing concepts, and advanced application."
+    }
+  };
+  
+  return levels[difficulty as keyof typeof levels] || levels[3];
+}
+
 // Template for flashcard generation
 const flashcardTemplate = ChatPromptTemplate.fromTemplate(`
 You are an expert educational content creator specialized in creating high-quality flashcards. Generate exactly {count} flashcards from the following content.
+
+Difficulty Level: {difficulty_level}
+Difficulty Instructions: {difficulty_instructions}
 
 Flashcard Creation Guidelines:
 - Focus on core concepts, definitions, and important facts
 - Ensure questions are specific and unambiguous
 - Create concise answers that fully address the question
-- Distribute difficulty levels ("easy", "medium", "hard") evenly
+- Adjust complexity based on the difficulty level specified above
 - Write questions that test understanding rather than simple recall
-- Avoid overly complex or compound questions
+- Avoid overly complex or compound questions unless difficulty is Very Hard
+- For higher difficulties, include more analysis and application questions
 
 {chunk_info}
 
@@ -29,14 +61,18 @@ Content:
 const examTemplate = ChatPromptTemplate.fromTemplate(`
 You are an expert educational assessment designer specializing in creating challenging but fair exam questions. Generate exactly {question_specs} from the following content.
 
+Difficulty Level: {difficulty_level}
+Difficulty Instructions: {difficulty_instructions}
+
 Question Design Guidelines:
 - Create clear, unambiguous questions that test understanding
 - For multiple-choice: ensure exactly 4 options with one clearly correct answer
 - For fill-in-blank: ensure the blank targets a key concept from the content
 - For short answer: define a clear scope for acceptable answers
 - Include detailed explanations that reinforce learning
-- Distribute difficulty levels ("easy", "medium", "hard") evenly
+- Adjust complexity based on the difficulty level specified above
 - Ensure questions cover different aspects of the content
+- For higher difficulties, include more analysis, synthesis, and application questions
 
 {chunk_info}
 {word_bank_instruction}
@@ -90,13 +126,17 @@ function extractTextFromAIMessage(message: AIMessage): string {
   return '';
 }
 
-export async function generateFlashcards(content: string, count: number = 10): Promise<GeminiResponse> {
+export async function generateFlashcards(content: string, count: number = 10, difficulty: number = 3): Promise<GeminiResponse> {
   try {
     const model = getGeminiModel();
+    const difficultyInfo = getDifficultyInstructions(difficulty);
+    
     const formattedPrompt = await flashcardTemplate.format({
       count,
       content,
       chunk_info: "",
+      difficulty_level: difficultyInfo.level,
+      difficulty_instructions: difficultyInfo.instructions,
       format_instructions: flashcardsParser.getFormatInstructions()
     });
 
@@ -125,7 +165,8 @@ export async function generateExamQuestions(
   multipleChoice: number = 5,
   fillInBlank: number = 0,
   shortAnswer: number = 0,
-  fillInBlankWordBank?: string[]
+  fillInBlankWordBank?: string[],
+  difficulty: number = 3
 ): Promise<GeminiResponse> {
   try {
     const mcCount = Number(multipleChoice) || 0;
@@ -155,11 +196,15 @@ export async function generateExamQuestions(
       : '';
 
     const model = getGeminiModel();
+    const difficultyInfo = getDifficultyInstructions(difficulty);
+    
     const formattedPrompt = await examTemplate.format({
       question_specs: questionSpecs.join(', '),
       content,
       chunk_info: "",
       word_bank_instruction: wordBankInstruction,
+      difficulty_level: difficultyInfo.level,
+      difficulty_instructions: difficultyInfo.instructions,
       format_instructions: examQuestionsParser.getFormatInstructions()
     });
 
