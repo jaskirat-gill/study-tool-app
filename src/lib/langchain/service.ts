@@ -2,7 +2,6 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { getGeminiModel } from './index';
 import { flashcardsParser, examQuestionsParser, addIdsToFlashcards, addIdsToExamQuestions } from './output-parsers';
 import { GeminiResponse } from '@/types';
-import { splitTextIntoDocuments, documentsToTextChunks, distributeItemsAcrossChunks } from './index';
 import { z } from 'zod';
 import { AIMessage } from '@langchain/core/messages';
 
@@ -93,68 +92,21 @@ function extractTextFromAIMessage(message: AIMessage): string {
 
 export async function generateFlashcards(content: string, count: number = 10): Promise<GeminiResponse> {
   try {
-    // Set thresholds for chunking
-    const chunkingThreshold = 8000; // Lower threshold for more manageable chunks
-    const needsChunking = content.length > chunkingThreshold;
+    const model = getGeminiModel();
+    const formattedPrompt = await flashcardTemplate.format({
+      count,
+      content,
+      chunk_info: "",
+      format_instructions: flashcardsParser.getFormatInstructions()
+    });
+
+    const response = await model.invoke(formattedPrompt);
+    const responseText = extractTextFromAIMessage(response);
+    const parsedOutput = await flashcardsParser.parse(responseText);
+    
     let allFlashcards: z.infer<typeof flashcardsParser.schema>['flashcards'] = [];
-
-    if (needsChunking) {
-      // Split into chunks with enhanced metadata
-      const documents = await splitTextIntoDocuments(content, { source: 'user_content', timestamp: new Date().toISOString() });
-      const chunks = documentsToTextChunks(documents);
-      
-      // Distribute flashcard count across chunks proportionally to content size
-      const cardCounts = distributeItemsAcrossChunks(documents, count);
-      
-      // Process each chunk with appropriate context
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        const chunkCardCount = cardCounts[i];
-        
-        if (chunkCardCount === 0) continue;
-
-        // Generate flashcards for this chunk
-        const chunkInfo = `This is chunk ${i + 1} of ${chunks.length} from a larger document. Focus on the content in this chunk specifically.`;
-        
-        const model = getGeminiModel();
-        const formattedPrompt = await flashcardTemplate.format({
-          count: chunkCardCount,
-          content: chunk.content,
-          chunk_info: chunkInfo,
-          format_instructions: flashcardsParser.getFormatInstructions()
-        });
-
-        const response = await model.invoke(formattedPrompt);
-        const responseText = extractTextFromAIMessage(response);
-        const parsedOutput = await flashcardsParser.parse(responseText);
-        
-        if (parsedOutput.flashcards && Array.isArray(parsedOutput.flashcards)) {
-          allFlashcards.push(...parsedOutput.flashcards);
-        }
-        
-        // Add adaptive delay between API calls based on content size
-        if (i < chunks.length - 1) {
-          const delayMs = Math.min(1500, Math.max(500, chunk.estimatedTokens / 10));
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-      }
-    } else {
-      // Process small content directly
-      const model = getGeminiModel();
-      const formattedPrompt = await flashcardTemplate.format({
-        count,
-        content,
-        chunk_info: "",
-        format_instructions: flashcardsParser.getFormatInstructions()
-      });
-
-      const response = await model.invoke(formattedPrompt);
-      const responseText = extractTextFromAIMessage(response);
-      const parsedOutput = await flashcardsParser.parse(responseText);
-      
-      if (parsedOutput.flashcards && Array.isArray(parsedOutput.flashcards)) {
-        allFlashcards = parsedOutput.flashcards;
-      }
+    if (parsedOutput.flashcards && Array.isArray(parsedOutput.flashcards)) {
+      allFlashcards = parsedOutput.flashcards;
     }
 
     // Add IDs to flashcards and ensure we don't exceed requested count
@@ -202,82 +154,22 @@ export async function generateExamQuestions(
       ? `IMPORTANT: For fill-in-the-blank questions, you MUST create questions that test the specific words provided in the word bank: [${fillInBlankWordBank.join(', ')}]. Each fill-in-the-blank question should have one of these words as the correct answer.`
       : '';
 
-    // Check if content needs chunking
-    const needsChunking = content.length > 10000;
+    const model = getGeminiModel();
+    const formattedPrompt = await examTemplate.format({
+      question_specs: questionSpecs.join(', '),
+      content,
+      chunk_info: "",
+      word_bank_instruction: wordBankInstruction,
+      format_instructions: examQuestionsParser.getFormatInstructions()
+    });
+
+    const response = await model.invoke(formattedPrompt);
+    const responseText = extractTextFromAIMessage(response);
+    const parsedOutput = await examQuestionsParser.parse(responseText);
+    
     let allQuestions: z.infer<typeof examQuestionsParser.schema>['examQuestions'] = [];
-
-    if (needsChunking) {
-      // Split into chunks
-      const documents = await splitTextIntoDocuments(content);
-      
-      // Distribute questions across chunks
-      const mcCounts = distributeItemsAcrossChunks(documents, mcCount);
-      const fibCounts = distributeItemsAcrossChunks(documents, fibCount);
-      const saCounts = distributeItemsAcrossChunks(documents, saCount);
-      
-      // Process each chunk
-      for (let i = 0; i < documents.length; i++) {
-        const doc = documents[i];
-        const chunkMcCount = mcCounts[i];
-        const chunkFibCount = fibCounts[i];
-        const chunkSaCount = saCounts[i];
-        
-        if (chunkMcCount + chunkFibCount + chunkSaCount === 0) continue;
-
-        // Build question specs for this chunk
-        const chunkQuestionSpecs = [];
-        if (chunkMcCount > 0) {
-          chunkQuestionSpecs.push(`${chunkMcCount} multiple choice questions (each with exactly 4 options)`);
-        }
-        if (chunkFibCount > 0) {
-          chunkQuestionSpecs.push(`${chunkFibCount} fill-in-the-blank questions`);
-        }
-        if (chunkSaCount > 0) {
-          chunkQuestionSpecs.push(`${chunkSaCount} short answer questions`);
-        }
-
-        const chunkInfo = `This is chunk ${i + 1} of ${documents.length} from a larger document. Focus on the content in this chunk specifically.`;
-        
-        const model = getGeminiModel();
-        const formattedPrompt = await examTemplate.format({
-          question_specs: chunkQuestionSpecs.join(', '),
-          content: doc.pageContent,
-          chunk_info: chunkInfo,
-          word_bank_instruction: wordBankInstruction,
-          format_instructions: examQuestionsParser.getFormatInstructions()
-        });
-
-        const response = await model.invoke(formattedPrompt);
-        const responseText = extractTextFromAIMessage(response);
-        const parsedOutput = await examQuestionsParser.parse(responseText);
-        
-        if (parsedOutput.examQuestions && Array.isArray(parsedOutput.examQuestions)) {
-          allQuestions.push(...parsedOutput.examQuestions);
-        }
-        
-        // Add delay between API calls
-        if (i < documents.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    } else {
-      // Process small content directly
-      const model = getGeminiModel();
-      const formattedPrompt = await examTemplate.format({
-        question_specs: questionSpecs.join(', '),
-        content,
-        chunk_info: "",
-        word_bank_instruction: wordBankInstruction,
-        format_instructions: examQuestionsParser.getFormatInstructions()
-      });
-
-      const response = await model.invoke(formattedPrompt);
-      const responseText = extractTextFromAIMessage(response);
-      const parsedOutput = await examQuestionsParser.parse(responseText);
-      
-      if (parsedOutput.examQuestions && Array.isArray(parsedOutput.examQuestions)) {
-        allQuestions = parsedOutput.examQuestions;
-      }
+    if (parsedOutput.examQuestions && Array.isArray(parsedOutput.examQuestions)) {
+      allQuestions = parsedOutput.examQuestions;
     }
 
     // Add IDs to questions and ensure we don't exceed requested count
@@ -293,61 +185,20 @@ export async function generateExamQuestions(
 
 export async function generateStudyNotes(content: string): Promise<{ notes?: string; error?: string }> {
   try {
-    // Check if content needs chunking
-    const needsChunking = content.length > 10000;
-    const allNotes: string[] = [];
+    const model = getGeminiModel();
+    const formattedPrompt = await notesTemplate.format({
+      content,
+      chunk_text: ""
+    });
 
-    if (needsChunking) {
-      // Split into chunks
-      const documents = await splitTextIntoDocuments(content);
-      
-      // Process each chunk
-      for (let i = 0; i < documents.length; i++) {
-        const doc = documents[i];
-        const chunkText = ` for chunk ${i + 1} of ${documents.length} from a larger document. Focus on the content in this chunk specifically`;
-        
-        const model = getGeminiModel();
-        const formattedPrompt = await notesTemplate.format({
-          content: doc.pageContent,
-          chunk_text: chunkText
-        });
-
-        const response = await model.invoke(formattedPrompt);
-        const responseText = extractTextFromAIMessage(response);
-        
-        if (responseText && responseText.trim()) {
-          allNotes.push(responseText.trim());
-        }
-        
-        // Add delay between API calls
-        if (i < documents.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    } else {
-      // Process small content directly
-      const model = getGeminiModel();
-      const formattedPrompt = await notesTemplate.format({
-        content,
-        chunk_text: ""
-      });
-
-      const response = await model.invoke(formattedPrompt);
-      const responseText = extractTextFromAIMessage(response);
-      
-      if (responseText && responseText.trim()) {
-        allNotes.push(responseText.trim());
-      }
-    }
-
-    // Combine all notes into a single document
-    const combinedNotes = allNotes.join('\n\n---\n\n');
-
-    if (!combinedNotes) {
+    const response = await model.invoke(formattedPrompt);
+    const responseText = extractTextFromAIMessage(response);
+    
+    if (!responseText || !responseText.trim()) {
       return { error: 'Failed to generate notes from the provided content.' };
     }
 
-    return { notes: combinedNotes };
+    return { notes: responseText.trim() };
   } catch (error) {
     return { 
       error: `Error generating notes: ${error instanceof Error ? error.message : 'Unknown error'}`
